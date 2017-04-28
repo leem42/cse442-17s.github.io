@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.states :hover {
+  fill: white;
+}
+
+.states {
+  fill: #ccc;
+  stroke: #fff;
+}
+
+.symbol {
+  fill-opacity: .8;
+  stroke: #fff;
+}
+</style>
+<head>
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src="https://d3js.org/topojson.v1.min.js"></script>
+	<script src="https://d3js.org/queue.v1.min.js"></script>
+</head>
+<body>
+<p>
+<!--
+<select name="topics">
+  <option value="CivilRight">Civil Right</option>
+  <option value="Anti-EthnicAttacks">Anti-Ethnic Attacks</option> 
+  <option value="PeaceMovement">Peace Movement</option>
+  </select> 
+  <!-- and so on... -->
+
+</p>
+<script>
+var width = 960,
+    height = 500;
+
+
+var radius = d3.scale.sqrt()
+    .domain([0, 1e6])
+    .range([0, 7]);	
+
+var shades = d3.scale.sqrt()
+.domain([0, 1e6])
+.range(['blue', 'steelblue']);
+	
+var path = d3.geo.path();
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+	
+queue()
+	.defer(d3.json, "us.json")
+    .defer(d3.json, "us-state-centroids.json")
+    .await(ready);
+	
+var data = [ {'value': 'Civil Right'}, {'value': 'Anti-Ethnic Attacks'}, {'value': 'Peace Movement'} ]
+
+var topics = d3.select("body")
+			.append("select")
+			.attr("id", "topics");
+			
+var options = topics.selectAll("option")
+               .data(data) // eg., data = [ {'value': 'Civil Right'}, {'value': 'Anti-Ethnic Attacks'}, {'value': 'Peace Movement'} ]
+               .enter()
+               .append("option");
+			   
+options.text(function (d) { return d.value; })
+       .attr("value", function (d) { return d.value; });
+
+
+
+var alertChange = function() {
+    //get the data value and index from the event
+    var selectedValue = d3.event.target.value;
+    var selectedIndex = d3.event.target.selectedIndex;
+    
+    //if you need to access more complicated attributes 
+    //or data from the option element, you can use the index
+    //to select the individual element:
+    var selectedDOMElement =
+        d3.event.target.children[selectedIndex];
+    var selection = d3.select(selectedDOMElement);
+    
+    alert(selection.text());
+}
+
+d3.select("select#topics").on("change", alertChange);
+		
+function ready(error, us, centroid) {
+  if (error) throw error;
+
+  svg.append("g")
+      .attr("class", "states")
+    .selectAll("path")
+    .data(topojson.feature(us, us.objects.states).features)
+    .enter().append("path")
+      .attr("d", path);
+
+  svg.selectAll(".symbol")
+    .data(centroid.features.sort(function(a, b) { return b.properties.population - a.properties.population; }))
+    .enter().append("path")
+      .attr("class", function(d) { return "symbol " + d.properties.name; })
+	  .attr("d", path.pointRadius(function(d) { return radius(1); }))
+	  .attr("fill", "white")
+	  .transition()
+	  .delay(500)
+	  .duration(1000)
+	  .attr("d", path.pointRadius(function(d) { return radius(d.properties.population); }))
+	  .attr("fill", function(d) {return shades(d.properties.population)});
+}
+
+</script>
+</body>
+</html>
