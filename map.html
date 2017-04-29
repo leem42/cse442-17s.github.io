@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>D3: Setting path fills dynamically to generate a choropleth</title>
+		<script src="https://d3js.org/d3.v3.min.js"></script>
+		<script src="https://d3js.org/queue.v1.min.js"></script>		
+		<script src="https://d3js.org/topojson.v1.min.js"></script>		<style type="text/css">
+		
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript">
+		us_state_abbrev = {
+			    'Alabama': 'AL',
+			    'Alaska': 'AK',
+			    'Arizona': 'AZ',
+			    'Arkansas': 'AR',
+			    'California': 'CA',
+			    'Colorado': 'CO',
+			    'Connecticut': 'CT',
+			    'Delaware': 'DE',
+			    'Florida': 'FL',
+			    'Georgia': 'GA',
+			    'Hawaii': 'HI',
+			    'Idaho': 'ID',
+			    'Illinois': 'IL',
+			    'Indiana': 'IN',
+			    'Iowa': 'IA',
+			    'Kansas': 'KS',
+			    'Kentucky': 'KY',
+			    'Louisiana': 'LA',
+			    'Maine': 'ME',
+			    'Maryland': 'MD',
+			    'Massachusetts': 'MA',
+			    'Michigan': 'MI',
+			    'Minnesota': 'MN',
+			    'Mississippi': 'MS',
+			    'Missouri': 'MO',
+			    'Montana': 'MT',
+			    'Nebraska': 'NE',
+			    'Nevada': 'NV',
+			    'New Hampshire': 'NH',
+			    'New Jersey': 'NJ',
+			    'New Mexico': 'NM',
+			    'New York': 'NY',
+			    'North Carolina': 'NC',
+			    'North Dakota': 'ND',
+			    'Ohio': 'OH',
+			    'Oklahoma': 'OK',
+			    'Oregon': 'OR',
+			    'Pennsylvania': 'PA',
+			    'Rhode Island': 'RI',
+			    'South Carolina': 'SC',
+			    'South Dakota': 'SD',
+			    'Tennessee': 'TN',
+			    'Texas': 'TX',
+			    'Utah': 'UT',
+			    'Vermont': 'VT',
+			    'Virginia': 'VA',
+			    'Washington': 'WA',
+			    'West Virginia': 'WV',
+			    'Wisconsin': 'WI',
+			    'Wyoming': 'WY',
+			}
+			
+			queue()
+			.defer(d3.json, "us-state-centroids.json")
+		    .await(ready);
+			//Width and height
+			var w = 500;
+			var h = 300;
+		
+			//Define map projection
+			var projection = d3.geo.albersUsa()
+								   .translate([w/2, h/2])
+								   .scale([500]);
+
+			//Define path generator
+			var path = d3.geo.path()
+							 .projection(projection);
+							 
+			//Define quantize scale to sort data values into buckets of color
+			var color = d3.scale.quantize()
+								.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+								//Colors taken from colorbrewer.js, included in the D3 download
+
+			//Create SVG element
+			var svg = d3.select("body")
+						.append("svg")
+						.attr("width", w)
+						.attr("height", h);
+
+			var stateProtest = {};
+			var maxValue = -1000000;
+			var minValue = 1000000;
+			//Load in agriculture data
+			d3.csv("http://localhost:8000/ConciseProtestDataCSV.csv", function(error,data) {
+				if( error ) {
+					throw error;
+				}
+		
+				//Set input domain for color scale
+				for(var i = 0; i < data.length; i++) {
+					// Must go through each state and each event for that state and then count the number of 
+					// protests for that state
+					var state = data[i].StateAbbreviation;
+					var protestClaim = data[i].BinnedClaim1;
+					
+					// check if that state has been viewed before
+					if (!stateProtest.hasOwnProperty(state) ) {
+						stateProtest[state] = {};
+					}
+					// check if that protest has been recorded in that state before
+					if(!stateProtest[state].hasOwnProperty(protestClaim)) {
+						stateProtest[state][protestClaim] = 0;
+	
+					}
+					// add +1 to to the state-protest pair count
+					stateProtest[state][protestClaim] = stateProtest[state][protestClaim] + 1;
+					
+				}
+				
+				// Get Aggregate Counts of Total Protests for Each State
+				for(var state in stateProtest) {
+					var sum = 0;
+					for(protest in stateProtest[state]) {
+						sum+=stateProtest[state][protest];
+					}
+					// for setting up the chloropleth color scheme
+					maxValue = Math.max(maxValue,sum );	
+					minValue = Math.min(minValue,sum );
+					
+					stateProtest[state]['Total'] = sum;
+				}
+				
+				
+				color.domain([ minValue, 1000]);
+				
+				
+				//Load in GeoJSON data
+				d3.json("us-states.json", function(error, json) {
+					if(error) {
+						throw error;
+					}
+					//Merge the ag. data and GeoJSON
+					//Loop through once for each ag. data value
+					for (var state in stateProtest) {
+						//Grab cumalative number of protests for the state 
+						var dataValue = stateProtest[state]['Total'];
+						console.log(state);
+						console.log(dataValue);
+						//Find the corresponding state inside the GeoJSON
+						for (var j = 0; j < json.features.length; j++) {
+						
+							var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
+				
+							if (state == jsonState) {
+						
+								//Copy the data value into the JSON
+								json.features[j].properties.value = dataValue;
+								
+								//Stop looking through the JSON
+								break;
+								
+							}
+						}		
+					}
+			
+			
+			});
+			
+		</script>
+	</body>
+</html>
