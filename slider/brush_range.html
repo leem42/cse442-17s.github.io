@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.axis--grid .domain {
+  fill: #ddd;
+  stroke: none;
+}
+
+.axis--x .domain,
+.axis--grid .tick line {
+  stroke: #fff;
+}
+
+.axis--grid .tick--minor line {
+  stroke-opacity: .5;
+}
+
+</style>
+<body>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+//var formatDate = d3.time.format("%Y");
+var parseDate = d3.timeParse("%Y");
+var timeFilter = null;
+
+
+var margin = {top: 200, right: 40, bottom: 200, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scaleTime()
+    .domain([new Date(1959, 12, 20), new Date(1980, 1, 1)])
+    .rangeRound([0, width]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.csv("./dummy_year_data.csv", function(error, data) {
+  if (error) throw error;
+  // format the data
+  data.forEach(function(d) {
+      d.year = parseDate(d.year);
+      d.val = +d.val;
+  });
+
+  // Scale the range of the data
+   // x.domain(d3.extent(data, function(d) { return d.year; }));
+});
+
+
+
+
+
+
+// Make the tall white tick marks
+svg.append("g")
+    .attr("class", "axis axis--grid")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x)
+        .ticks(d3.timeYear.every(5))
+        .tickSize(-height)
+        .tickFormat(function() { return null; }));
+  //.selectAll(".tick")
+  //  .classed("tick--minor", function(d) { return d.getYears(); });
+
+// Draw the year labels (TODO how do you mark the first one?)
+svg.append("g")
+    .attr("class", "axis axis--x")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x)
+        .ticks(d3.timeYear)
+        .tickPadding(0))
+    .attr("text-anchor", null)
+  .selectAll("text")
+    .attr("x", 6);
+
+// Draw the brush.
+svg.append("g")
+    .attr("class", "brush")
+    .call(d3.brushX()
+        .extent([[0, 0], [width, height]])
+        .on("end", brushended));
+
+function brushended() {
+  if (!d3.event.sourceEvent) return; // Only transition after input.
+  if (!d3.event.selection) return; // Ignore empty selections.
+  console.log('prev time filter: ', timeFilter);
+  var d0 = d3.event.selection.map(x.invert),
+      d1 = d0.map(d3.timeYear.round);
+
+  // If empty when rounded, use floor & ceil instead.
+  if (d1[0] >= d1[1]) {
+    d1[0] = d3.timeYear.floor(d0[0]);
+    d1[1] = d3.timeYear.offset(d1[0]);
+  }
+
+  console.log('d0: ', d0);
+  console.log('d1: ', d1);
+  timeFilter = d1;
+
+
+
+  d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+}
+
+
+</script>
