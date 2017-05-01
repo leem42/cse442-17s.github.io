@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+polyline {
+	opacity: .3;
+	stroke: black;
+	stroke-width: 2px;
+	fill: none;
+}
+
+polyline {
+	opacity: .3;
+	stroke: black;
+	stroke-width: 2px;
+	fill: none;
+}
+
+.labelValue {
+	font-size: 50%;
+	opacity: .5;
+}
+
+.arc wedge:hover {
+	cursor: pointer;
+}
+
+.arc text {
+	font: 10px sans-serif;
+	text-anchor: middle;
+}
+
+.arc wedge {
+	stroke-width: 1.5;
+	stroke: #fff;
+}
+/* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
+.toolTip {
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	position: absolute;
+	display: none;
+	width: auto;
+	height: auto;
+	background: none repeat scroll 0 0 white;
+	border: 0 none;
+	border-radius: 8px 8px 8px 8px;
+	box-shadow: -3px 3px 15px #888888;
+	color: black;
+	font: 12px sans-serif;
+	padding: 5px;
+	text-align: center;
+}
+
+.states :hover {
+	fill: white;
+}
+
+.states {
+	fill: #ccc;
+	stroke: #fff;
+}
+
+.symbol {
+	fill-opacity: .8;
+	stroke: #fff;
+}
+</style>
+
+<head>
+<meta charset="utf-8">
+<title>Pie</title>
+<script type = "text/javascript" src = "abbreviated_map.json"> </script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+</head>
+
+<body>
+	<svg width="1024" height="500"></svg>
+	<script>
+  
+ 
+	var xobj = 0;
+	 function loadJSON(callback) {   
+
+		    xobj = new XMLHttpRequest();
+		        xobj.overrideMimeType("application/json");
+		    xobj.open('GET', 'abbreviated_map.json', true); // Replace 'my_data' with the path to your file
+		    xobj.onreadystatechange = function () {
+		          if (xobj.readyState == 4 && xobj.status == "200") {
+		            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+		            callback(xobj.responseText);
+		          }
+		    };
+		    xobj.send(null);  
+	}
+
+  var us_state_abbrev = xobj;
+
+  
+  var svg = d3.select("svg"),
+  width = +svg.attr("width"),
+  height = +svg.attr("height"),
+  radius = Math.min(width, height) / 3,
+
+  g2 = svg.append("g")
+  .attr("transform", "translate(" + width / 2  + "," + height / 2 + ")")
+  .attr("class", "labelName"),
+  
+  g = svg.append("g")
+  .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+  .attr("class", "lines");
+
+  var color = d3.scaleOrdinal(["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#e5d8bd","#fddaec","#f2f2f2"]);
+
+  var div = d3.select("body").append("div").attr("class", "toolTip");
+  
+  // pie chart: https://bl.ocks.org/mbostock/3887235
+  var pie = d3.pie()
+  .sort(function(a, b) { return b.value.count - a.value.count; })
+  .value(function(d) { return d.value.count; })
+
+  var wedge = d3.arc()
+  .outerRadius(radius - 10)
+  .innerRadius(0);
+
+  function midAngle(d){
+      return d.startAngle + (d.endAngle - d.startAngle)/2;
+  }
+
+  var innerLabel = d3.arc()
+  .outerRadius(radius * 0.8)
+  .innerRadius(radius * 0.4);
+
+  var innerPolyline = d3.arc()
+  .outerRadius(radius * 0.8)
+  .innerRadius(radius * 0.5);
+
+  var outerPolyline = d3.arc()
+  .innerRadius(radius * 0.9)
+  .outerRadius(radius * 0.9);
+
+  d3.csv("ConciseProtestDataCSV.csv", function(data) {
+    var BinnedClaimCount = d3.nest()
+    .key(function(d) { return d.BinnedClaim1; }) // {claim1 : subdivClaim1: Yes No }
+    .rollup(function(v) { 
+      return {
+        "name": "BinnedClaim",
+        "count": v.length,
+        "values": d3.nest()
+        .key(function(d) { return d.claim1; })
+        .rollup(function(v) { 
+          return { 
+            "name": "Claim1",
+            "count": v.length, 
+            "values": d3.nest()
+            .key(function(d) { return d.val1; })
+            .rollup(function(v) { 
+              return {
+                "name": "val1",
+                "count": v.length
+              };})
+            .entries(v)
+          }})
+        .entries(v)
+      }; })
+    .entries(data);
+
+    createPie(BinnedClaimCount);
+
+    var polyline = svg.select(".lines")
+    .selectAll("polyline")
+    .data(pie(BinnedClaimCount))
+    .enter()
+    .append("polyline")
+    .transition()
+    .duration(1000)
+    .attrTween("points", function(d){
+        this._current = this._current || d;
+        var interpolate = d3.interpolate(this._current, d);
+        this._current = interpolate(0);
+        return function(t) {
+            var d2 = interpolate(t);
+            var pos = outerPolyline.centroid(d2);
+            pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+            return [innerPolyline.centroid(d2), outerPolyline.centroid(d2), pos];
+        };
+    });
+
+     polyline.exit()
+    .remove();
+  }); 
+
+  var initial_x = 0;
+  var shift = 100;
+
+  function createPie(pie_info) {
+    var level = pie_info[0].value.name;
+    var arc = g.selectAll(".arc " + level)
+    .data(pie(pie_info))
+    .enter().append("g")
+    .attr("class", "arc " + level);
+
+    arc.append("path")
+    .attr("d", wedge)
+    .attr("fill", function(d) { return color(d.data.key); })
+    .on('mouseover', function(d){
+      d3.select(this).style("stroke", color(d.data.key));
+      div.style("left", d3.event.pageX+10+"px");
+      div.style("top", d3.event.pageY-25+"px");
+      div.style("display", "inline-block");
+      div.html((d.data.key) + "<br>" + (d.data.value.count));
+     })
+    .on('mouseout', function(d){
+      d3.select(this).style("stroke", "#fff");
+      div.style("display", "none");
+     });
+    if (level == 'BinnedClaim') {
+      // http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde
+      var text = svg.select(".labelName")
+      .selectAll("text")
+      .data(pie(pie_info), function(d){ return d.data.key })
+      .enter()
+      .append("text")
+      .attr("dy", ".35em")
+      .text(function(d) { return (d.data.key);})
+      .transition().duration(1000)
+      .attrTween("transform", function(d) {
+        this._current = this._current || d;
+        var interpolate = d3.interpolate(this._current, d);
+        this._current = interpolate(0);
+        return function(t) {
+            var d2 = interpolate(t);
+            var pos = outerPolyline.centroid(d2);
+            pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+            return "translate("+ pos +")";
+        };})
+        .styleTween("text-anchor", function(d){
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                return midAngle(d2) < Math.PI ? "start":"end";
+            };
+        }).text(function(d) {
+            return (d.data.key);
+        });
+    } else {
+      arc.append("text")
+      .attr("transform", function(d) { return "translate(" + innerLabel.centroid(d) + ")"; })
+      .attr("dy", "0.35em")
+      .text(function(d) { return d.data.key; });
+    }
+    
+    
+    d3.selectAll("." + level)
+    .attr("transform", "translate(" + (initial_x + 10) + ",0)")
+    arc.on("click", function(d) {
+      values = d.data.value.values
+      lower_level =  values[0].value.name
+
+      // TODO: Drill down, filter data here.
+      if (d3.selectAll("." + lower_level).empty()) {
+        createPie(values);
+        d3.selectAll("." + lower_level)
+        .transition()
+        .duration(750)
+        .attr("transform", "translate(" + (initial_x + shift) + ",0)")
+        initial_x += shift;
+      } else {
+        // TODO: remove filter, add data back in.
+        if (lower_level == 'Claim1' && !d3.selectAll(".val1").empty()) {
+          d3.selectAll(".val1").remove();
+          initial_x -= shift;
+        }
+        d3.selectAll("." + lower_level).remove();
+        initial_x -= shift;
+      }
+    
+      d3.event.stopPropagation();});
+    //	End Of Pie Code 
+	 
+    // Start of Map Code
+    var projection = d3.geoAlbersUsa()
+	   .translate([w/2, h/2])
+	   .scale([500]);
+	
+	//Define path generator
+	var path = d3.geoPath().projection(projection);
+	
+	//Define quantize scale to sort data values into buckets of color
+	var colorByQuartile = d3.scaleQuantize()
+		.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+		//colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
+	
+	//Create SVG element
+	var svg = d3.select("body")
+	.append("svg")
+	.attr("width", w)
+	.attr("height", h);
+	
+	var stateProtest = {};
+	var maxValue = -1000000;
+	var minValue = 1000000;
+	//Load in agriculture data
+	d3.csv("http://localhost:8000/ConciseProtestDataCSV.csv", function(error,data) {
+		if( error ) {
+			throw error;
+		}
+	
+	//Set input domain for colorByQuartile scale
+		for(var i = 0; i < data.length; i++) {
+	// Must go through each state and each event for that state and then count the number of 
+	// protests for that state
+			var state = data[i].StateAbbreviation;
+			var protestClaim = data[i].BinnedClaim1;
+	
+			// check if that state has been viewed before
+			if (!stateProtest.hasOwnProperty(state) ) {
+				stateProtest[state] = {};
+			}
+			// check if that protest has been recorded in that state before
+			if(!stateProtest[state].hasOwnProperty(protestClaim)) {
+				stateProtest[state][protestClaim] = 0;
+			} 
+			// state --> protest label --> number of that label
+			// add +1 to to the state-protest pair count
+			stateProtest[state][protestClaim] = stateProtest[state][protestClaim] + 1;
+			
+			}
+	
+		// Get Aggregate Counts of Total Protests for Each State
+			for(var state in stateProtest) {
+				var sum = 0;
+				for(protest in stateProtest[state]) {
+					sum+=stateProtest[state][protest];
+				}
+				// for setting up the chloropleth colorByQuartile scheme
+				maxValue = Math.max(maxValue,sum );	
+				minValue = Math.min(minValue,sum );
+				
+				stateProtest[state]['Total'] = sum;
+			}
+		
+	
+			colorByQuartile.domain([ minValue, 1000]);
+	
+	
+	//Load in GeoJSON data
+			d3.json("us-states.json", function(error, json) {
+				if(error) {
+					throw error;
+				}
+				//Merge the ag. data and GeoJSON
+				//Loop through once for each ag. data value
+				for (var state in stateProtest) {
+					//Grab cumalative number of protests for the state 
+					var dataValue = stateProtest[state]['Total'];
+					console.log(state);
+					console.log(dataValue);
+				//Find the corresponding state inside the GeoJSON
+				for (var j = 0; j < json.features.length; j++) {
+	
+					var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
+	
+					if (state == jsonState) {
+		
+						//Copy the data value into the JSON
+						json.features[j].properties.value = dataValue;
+						
+						//Stop looking through the JSON
+						break;
+						}
+					}		
+				}
+	
+	
+			// If mouse hovers over a state then highlight it
+			function handleMouseOver(d, i) {  // Add interactivity
+				d3.select(this)
+				.style("fill","rgb(0,0,255)");
+			
+				// Specify where to put label of text
+				svg.append("text")
+				.attr("transform", function(d) { return "translate(225, 275)"; })
+				// .attr({
+				//    id: d.value,  
+				//     x: 225,
+				//     y: 275 
+				// }) // show the statename
+				.text(function() {
+					var out = d.properties.name;
+				return out;  
+				});
+				svg.append("text")
+				// .attr({
+				//     id: d.value, 
+				//      x: 225,
+				//      y: 300 
+				//  }) // show the value for that state
+				.attr("transform", function(d) { return "translate(225, 300)"; })
+				 .text(function() {
+						var out = "Total Protests:" + d.properties.value;
+				   return out;  // Value of the text
+				 });
+				}
+	
+	
+				function handleMouseOut(d,i) {
+				d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
+				svg.selectAll("text").remove();
+				}
+	
+				svg.selectAll("path")
+				.data(json.features)
+				.enter()
+				.append("path")
+				.attr("d", path)
+				.on("mouseover",handleMouseOver)
+				.on("mouseout", handleMouseOut) 
+				.style("fill", function(d) {
+				//Get data value
+				var value = d.properties.value;
+				
+				if (value) {
+					//If value exists…
+					return colorByQuartile(value);
+				} else {
+					//If value is undefined…
+					return "#ccc";
+				}
+			});
+			
+			});
+			
+			});
+
+  }
+  </script>
+</body>
+</html>
+
