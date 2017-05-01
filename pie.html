@@ -107,7 +107,7 @@ polyline{
 
   d3.csv("ConciseProtestDataCSV.csv", function(data) {
     var BinnedClaimCount = d3.nest()
-    .key(function(d) { return d.BinnedClaim1; })
+    .key(function(d) { return d.BinnedClaim1; }) // {claim1 : subdivClaim1: Yes No }
     .rollup(function(v) { 
       return {
         "name": "BinnedClaim",
