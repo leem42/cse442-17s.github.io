@@ -75,9 +75,6 @@ polyline {
 </head>
 
 <body>
-
-
-	<svg width="1024" height="500"></svg>
 	<script>
     	var us_state_abbrev = {
 		    'Alabama': 'AL',
@@ -131,36 +128,30 @@ polyline {
 		    'Wisconsin': 'WI',
 		    'Wyoming': 'WY',
 	};
- 
-	// var xobj = 0;
-	//  function loadJSON(callback) {   
-
-	// 	    xobj = new XMLHttpRequest();
-	// 	        xobj.overrideMimeType("application/json");
-	// 	    xobj.open('GET', 'abbreviated_map.json', true); // Replace 'my_data' with the path to your file
-	// 	    xobj.onreadystatechange = function () {
-	// 	          if (xobj.readyState == 4 && xobj.status == "200") {
-	// 	            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
-	// 	            callback(xobj.responseText);
-	// 	          }
-	// 	    };
-	// 	    xobj.send(null);  
-	// }
-
- //  var us_state_abbrev = xobj;
-
   
-  var svgPie = d3.select("svg"),
+  	var width = 1024, 
+  		height = 500;
+  //Create SVG element
+	var svg = d3.select("body")
+	.append("svg")
+	.attr("width", width)
+	.attr("height", height);
+//Create SVG element
+	var svgPie = d3.select("body")
+	.append("svg")
+	.attr("width", width)
+	.attr("height", height);
+  radius = Math.min(width, height) / 3,
   width = +svgPie.attr("width"),
   height = +svgPie.attr("height"),
-  radius = Math.min(width, height) / 3,
+ 
 
   g2 = svgPie.append("g")
-  .attr("transform", "translate(" + width / 2  + "," + height / 2 + ")")
+  .attr("transform", "translate(" + width / 3  + "," + height / 3 + ")")
   .attr("class", "labelName"),
   
   g = svgPie.append("g")
-  .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+  .attr("transform", "translate(" + width / 3 + "," + height / 3 + ")")
   .attr("class", "lines");
 
   var color = d3.scaleOrdinal(["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#e5d8bd","#fddaec","#f2f2f2"]);
@@ -226,7 +217,7 @@ polyline {
     .enter()
     .append("polyline")
     .transition()
-    .duration(1000)
+    .duration(500)
     .attrTween("points", function(d){
         this._current = this._current || d;
         var interpolate = d3.interpolate(this._current, d);
@@ -274,7 +265,7 @@ polyline {
       .append("text")
       .attr("dy", ".35em")
       .text(function(d) { return (d.data.key);})
-      .transition().duration(1000)
+      .transition().duration(500)
       .attrTween("transform", function(d) {
         this._current = this._current || d;
         var interpolate = d3.interpolate(this._current, d);
@@ -315,7 +306,7 @@ polyline {
         createPie(values);
         d3.selectAll("." + lower_level)
         .transition()
-        .duration(750)
+        .duration(500)
         .attr("transform", "translate(" + (initial_x + shift) + ",0)")
         initial_x += shift;
       } else {
@@ -328,13 +319,16 @@ polyline {
         initial_x -= shift;
       }
     
+    
       d3.event.stopPropagation();});
+  }
+
     //	End Of Pie Code 
-	 
+	
     // Start of Map Code
     var projection = d3.geoAlbersUsa()
 	   .translate([width/2, height/2])
-	   .scale([500]);
+	   .scale([1000]);
 	
 	//Define path generator
 	var path = d3.geoPath().projection(projection);
@@ -344,11 +338,7 @@ polyline {
 		.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
 		//colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
 	
-	//Create SVG element
-	var svg = d3.select("body")
-	.append("svg")
-	.attr("width", width)
-	.attr("height", height);
+	
 	
 	var stateProtest = {};
 	var maxValue = -1000000;
@@ -402,14 +392,11 @@ polyline {
 				if(error) {
 					throw error;
 				}
-				console.log(us_state_abbrev);
 				//Merge the ag. data and GeoJSON
 				//Loop through once for each ag. data value
 				for (var state in stateProtest) {
 					//Grab cumalative number of protests for the state 
 					var dataValue = stateProtest[state]['Total'];
-					console.log(state);
-					console.log(dataValue);
 
 				//Find the corresponding state inside the GeoJSON
 				for (var j = 0; j < json.features.length; j++) {
@@ -460,7 +447,6 @@ polyline {
 	
 	
 				function handleMouseOut(d,i) {
-					console.log(d.properties.value);
 				d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
 				svg.selectAll("text").remove();
 				}
@@ -489,7 +475,6 @@ polyline {
 			
 			});
 
-  }
   </script>
 </body>
 </html>
