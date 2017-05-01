@@ -1,11 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
+	    
 		<meta charset="utf-8">
 		<title>D3: Setting path fills dynamically to generate a choropleth</title>
 		<script src="https://d3js.org/d3.v3.min.js"></script>
 		<script src="https://d3js.org/queue.v1.min.js"></script>		
 		<script src="https://d3js.org/topojson.v1.min.js"></script>		<style type="text/css">
+		.states :hover {
+		  fill: white;
+		}
+		
+		.states {
+		  fill: #ccc;
+		  stroke: #fff;
+		}
+		
+		.symbol {
+		  fill-opacity: .8;
+		  stroke: #fff;
+		}
 		
 		</style>
 	</head>
@@ -64,9 +78,6 @@
 			    'Wyoming': 'WY',
 			}
 			
-			queue()
-			.defer(d3.json, "us-state-centroids.json")
-		    .await(ready);
 			//Width and height
 			var w = 500;
 			var h = 300;
@@ -166,7 +177,64 @@
 							}
 						}		
 					}
-			
+					
+				
+					 // If mouse hovers over a state then highlight it
+				      function handleMouseOver(d, i) {  // Add interactivity
+				            d3.select(this).attr({
+				              style: "fill : rgb(0,0,255)",
+				            });
+
+				            // Specify where to put label of text
+				            svg.append("text").attr({
+				               id: d.value,  
+				                x: 225,
+				                y: 275 
+				            }) // show the statename
+				            .text(function() {
+				           		var out = d.properties.name;
+				              return out;  
+				            });
+				            svg.append("text").attr({
+					               id: d.value, 
+					                x: 225,
+					                y: 300 
+					            }) // show the value for that state
+					            .text(function() {
+					           		var out = "Total Protests:" + d.properties.value;
+					              return out;  // Value of the text
+					            });
+			          }
+				      
+					 
+				      function handleMouseOut(d,i) {
+			    	      	  d3.select(this).attr({
+				              style: "fill : " + color(d.properties.value) + "",
+				            });
+			    	      	 svg.selectAll("text").remove();
+				      }
+				      
+				      svg.selectAll("path")
+					   .data(json.features)
+					   .enter()
+					   .append("path")
+					   .attr("d", path)
+					    .on("mouseover",handleMouseOver)
+					   .on("mouseout", handleMouseOut) 
+					   .style("fill", function(d) {
+					   		//Get data value
+					   		var value = d.properties.value;
+					   		
+					   		if (value) {
+					   			//If value exists…
+						   		return color(value);
+					   		} else {
+					   			//If value is undefined…
+						   		return "#ccc";
+					   		}
+					   });
+				
+				});
 			
 			});
 			
