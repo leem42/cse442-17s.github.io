@@ -1,4 +1,4 @@
-us_state_abbrev = '[{
+us_state_abbrev = {
 		    'Alabama': 'AL',
 		    'Alaska': 'AK',
 		    'Arizona': 'AZ',
@@ -49,4 +49,4 @@ us_state_abbrev = '[{
 		    'West Virginia': 'WV',
 		    'Wisconsin': 'WI',
 		    'Wyoming': 'WY',
-}]';
+};
