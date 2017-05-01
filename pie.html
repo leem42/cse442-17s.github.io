@@ -9,9 +9,16 @@
   fill: none;
 }
 
+polyline{
+  opacity: .3;
+  stroke: black;
+  stroke-width: 2px;
+  fill: none;
+}
+
 .labelValue
 {
-  font-size: 60%;
+  font-size: 50%;
   opacity: .5;
   
 }
@@ -54,33 +61,49 @@
 </head>
 
 <body>
-  <svg width="960" height="500"></svg>
+  <svg width="1024" height="500"></svg>
   <script>
   var svg = d3.select("svg"),
   width = +svg.attr("width"),
   height = +svg.attr("height"),
-  radius = Math.min(width, height) / 2,
-  g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+  radius = Math.min(width, height) / 3,
 
-  var color = d3.scaleOrdinal(["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#ffffcc","#e5d8bd","#fddaec","#f2f2f2"]);
+  g2 = svg.append("g")
+  .attr("transform", "translate(" + width / 2  + "," + height / 2 + ")")
+  .attr("class", "labelName"),
+  
+  g = svg.append("g")
+  .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+  .attr("class", "lines");
+
+  var color = d3.scaleOrdinal(["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#e5d8bd","#fddaec","#f2f2f2"]);
 
   var div = d3.select("body").append("div").attr("class", "toolTip");
   
   // pie chart: https://bl.ocks.org/mbostock/3887235
   var pie = d3.pie()
-  .sort(null)
-  .value(function(d) { return d.value.count; });
+  .sort(function(a, b) { return b.value.count - a.value.count; })
+  .value(function(d) { return d.value.count; })
 
   var path = d3.arc()
   .outerRadius(radius - 10)
   .innerRadius(0);
 
-  var legendRectSize = (radius * 0.05) + 100;
-  var legendSpacing = radius * 0.02 + 100;
+  function midAngle(d){
+      return d.startAngle + (d.endAngle - d.startAngle)/2;
+  }
 
-  var label = d3.arc()
-  .outerRadius(radius - 40)
-  .innerRadius(radius - 40);
+  var innerLabel = d3.arc()
+  .outerRadius(radius * 0.8)
+  .innerRadius(radius * 0.4);
+
+  var innerPolyline = d3.arc()
+  .outerRadius(radius * 0.8)
+  .innerRadius(radius * 0.5);
+
+  var outerPolyline = d3.arc()
+  .innerRadius(radius * 0.9)
+  .outerRadius(radius * 0.9);
 
   d3.csv("ConciseProtestDataCSV.csv", function(data) {
     var BinnedClaimCount = d3.nest()
@@ -109,12 +132,34 @@
     .entries(data);
 
     createPie(BinnedClaimCount);
+
+    var polyline = svg.select(".lines")
+    .selectAll("polyline")
+    .data(pie(BinnedClaimCount))
+    .enter()
+    .append("polyline")
+    .transition()
+    .duration(1000)
+    .attrTween("points", function(d){
+        this._current = this._current || d;
+        var interpolate = d3.interpolate(this._current, d);
+        this._current = interpolate(0);
+        return function(t) {
+            var d2 = interpolate(t);
+            var pos = outerPolyline.centroid(d2);
+            pos[0] = radius * 0.95 * (midAngle(d2) < Math.PI ? 1 : -1);
+            return [innerPolyline.centroid(d2), outerPolyline.centroid(d2), pos];
+        };
+    });
+
+     polyline.exit()
+    .remove();
   }); 
+
   var initial_x = 0;
   var shift = 100;
 
   function createPie(pie_info) {
-
     var level = pie_info[0].value.name;
     var arc = g.selectAll(".arc " + level)
     .data(pie(pie_info))
@@ -135,11 +180,44 @@
       d3.select(this).style("stroke", "#fff");
       div.style("display", "none");
      });
-
-    arc.append("text")
-    .attr("transform", function(d) { return "translate(" + label.centroid(d) + ")"; })
-    .attr("dy", "0.35em")
-    .text(function(d) { return (d.data.key) +" "+ (d.data.value.count); });
+    if (level == 'BinnedClaim') {
+      // http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde
+      var text = svg.select(".labelName")
+      .selectAll("text")
+      .data(pie(pie_info), function(d){ return d.data.key })
+      .enter()
+      .append("text")
+      .attr("dy", ".35em")
+      .text(function(d) { return (d.data.key);})
+      .transition().duration(1000)
+      .attrTween("transform", function(d) {
+        this._current = this._current || d;
+        var interpolate = d3.interpolate(this._current, d);
+        this._current = interpolate(0);
+        return function(t) {
+            var d2 = interpolate(t);
+            var pos = outerPolyline.centroid(d2);
+            pos[0] = radius * (midAngle(d2) < Math.PI ? 1 : -1);
+            return "translate("+ pos +")";
+        };})
+        .styleTween("text-anchor", function(d){
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                return midAngle(d2) < Math.PI ? "start":"end";
+            };
+        }).text(function(d) {
+            return (d.data.key);
+        });
+    } else {
+      arc.append("text")
+      .attr("transform", function(d) { return "translate(" + innerLabel.centroid(d) + ")"; })
+      .attr("dy", "0.35em")
+      .text(function(d) { return d.data.key; });
+    }
+    
     
     d3.selectAll("." + level)
     .attr("transform", "translate(" + (initial_x + 10) + ",0)")
