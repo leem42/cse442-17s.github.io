@@ -4,7 +4,7 @@
 	    
 		<meta charset="utf-8">
 		<title>D3: Setting path fills dynamically to generate a choropleth</title>
-		<script src="https://d3js.org/d3.v3.min.js"></script>
+		<script src="https://d3js.org/d3.v4.min.js"></script>
 		<script src="https://d3js.org/queue.v1.min.js"></script>		
 		<script src="https://d3js.org/topojson.v1.min.js"></script>		<style type="text/css">
 		.states :hover {
@@ -83,16 +83,16 @@
 			var h = 300;
 		
 			//Define map projection
-			var projection = d3.geo.albersUsa()
+			var projection = d3.geoAlbersUsa()
 								   .translate([w/2, h/2])
 								   .scale([500]);
 
 			//Define path generator
-			var path = d3.geo.path()
+			var path = d3.geoPath()
 							 .projection(projection);
 							 
 			//Define quantize scale to sort data values into buckets of color
-			var color = d3.scale.quantize()
+			var color = d3.scaleQuantize()
 								.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
 								//Colors taken from colorbrewer.js, included in the D3 download
 
@@ -181,25 +181,28 @@
 				
 					 // If mouse hovers over a state then highlight it
 				      function handleMouseOver(d, i) {  // Add interactivity
-				            d3.select(this).attr({
-				              style: "fill : rgb(0,0,255)",
-				            });
+				            d3.select(this)
+				            .style("fill","rgb(0,0,255)");
 
 				            // Specify where to put label of text
-				            svg.append("text").attr({
-				               id: d.value,  
-				                x: 225,
-				                y: 275 
-				            }) // show the statename
+				            svg.append("text")
+				            .attr("transform", function(d) { return "translate(225, 275)"; })
+				            // .attr({
+				            //    id: d.value,  
+				            //     x: 225,
+				            //     y: 275 
+				            // }) // show the statename
 				            .text(function() {
 				           		var out = d.properties.name;
 				              return out;  
 				            });
-				            svg.append("text").attr({
-					               id: d.value, 
-					                x: 225,
-					                y: 300 
-					            }) // show the value for that state
+				            svg.append("text")
+				              // .attr({
+					           //     id: d.value, 
+					           //      x: 225,
+					           //      y: 300 
+					           //  }) // show the value for that state
+								.attr("transform", function(d) { return "translate(225, 300)"; })
 					            .text(function() {
 					           		var out = "Total Protests:" + d.properties.value;
 					              return out;  // Value of the text
@@ -208,9 +211,7 @@
 				      
 					 
 				      function handleMouseOut(d,i) {
-			    	      	  d3.select(this).attr({
-				              style: "fill : " + color(d.properties.value) + "",
-				            });
+			    	      	d3.select(this).style("fill", color(d.properties.value) + "");
 			    	      	 svg.selectAll("text").remove();
 				      }
 				      
