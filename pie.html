@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+  polyline{
+  opacity: .3;
+  stroke: black;
+  stroke-width: 2px;
+  fill: none;
+}
+
+.labelValue
+{
+  font-size: 60%;
+  opacity: .5;
+  
+}
+  .arc path:hover  {
+    cursor: pointer;
+  }
+
+  .arc text {
+    font: 10px sans-serif;
+    text-anchor: middle;
+  }
+
+  .arc path {
+    stroke-width: 1.5;
+    stroke: #fff;
+  }
+  /* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
+  .toolTip {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    position: absolute;
+    display: none;
+    width: auto;
+    height: auto;
+    background: none repeat scroll 0 0 white;
+    border: 0 none;
+    border-radius: 8px 8px 8px 8px;
+    box-shadow: -3px 3px 15px #888888;
+    color: black;
+    font: 12px sans-serif;
+    padding: 5px;
+    text-align: center;
+  }
+</style>
+
+<head>
+  <meta charset="utf-8">
+  <title>Pie</title>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+</head>
+
+<body>
+  <svg width="960" height="500"></svg>
+  <script>
+  var svg = d3.select("svg"),
+  width = +svg.attr("width"),
+  height = +svg.attr("height"),
+  radius = Math.min(width, height) / 2,
+  g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+  var color = d3.scaleOrdinal(["#fbb4ae","#b3cde3","#ccebc5","#decbe4","#fed9a6","#ffffcc","#e5d8bd","#fddaec","#f2f2f2"]);
+
+  var div = d3.select("body").append("div").attr("class", "toolTip");
+  
+  // pie chart: https://bl.ocks.org/mbostock/3887235
+  var pie = d3.pie()
+  .sort(null)
+  .value(function(d) { return d.value.count; });
+
+  var path = d3.arc()
+  .outerRadius(radius - 10)
+  .innerRadius(0);
+
+  var legendRectSize = (radius * 0.05) + 100;
+  var legendSpacing = radius * 0.02 + 100;
+
+  var label = d3.arc()
+  .outerRadius(radius - 40)
+  .innerRadius(radius - 40);
+
+  d3.csv("ConciseProtestDataCSV.csv", function(data) {
+    var BinnedClaimCount = d3.nest()
+    .key(function(d) { return d.BinnedClaim1; })
+    .rollup(function(v) { 
+      return {
+        "name": "BinnedClaim",
+        "count": v.length,
+        "values": d3.nest()
+        .key(function(d) { return d.claim1; })
+        .rollup(function(v) { 
+          return { 
+            "name": "Claim1",
+            "count": v.length, 
+            "values": d3.nest()
+            .key(function(d) { return d.val1; })
+            .rollup(function(v) { 
+              return {
+                "name": "val1",
+                "count": v.length
+              };})
+            .entries(v)
+          }})
+        .entries(v)
+      }; })
+    .entries(data);
+
+    createPie(BinnedClaimCount);
+  }); 
+  var initial_x = 0;
+  var shift = 100;
+
+  function createPie(pie_info) {
+
+    var level = pie_info[0].value.name;
+    var arc = g.selectAll(".arc " + level)
+    .data(pie(pie_info))
+    .enter().append("g")
+    .attr("class", "arc " + level);
+
+    arc.append("path")
+    .attr("d", path)
+    .attr("fill", function(d) { return color(d.data.key); })
+    .on('mouseover', function(d){
+      d3.select(this).style("stroke", color(d.data.key));
+      div.style("left", d3.event.pageX+10+"px");
+      div.style("top", d3.event.pageY-25+"px");
+      div.style("display", "inline-block");
+      div.html((d.data.key) + "<br>" + (d.data.value.count));
+     })
+    .on('mouseout', function(d){
+      d3.select(this).style("stroke", "#fff");
+      div.style("display", "none");
+     });
+
+    arc.append("text")
+    .attr("transform", function(d) { return "translate(" + label.centroid(d) + ")"; })
+    .attr("dy", "0.35em")
+    .text(function(d) { return (d.data.key) +" "+ (d.data.value.count); });
+    
+    d3.selectAll("." + level)
+    .attr("transform", "translate(" + (initial_x + 10) + ",0)")
+    arc.on("click", function(d) {
+      values = d.data.value.values
+      lower_level =  values[0].value.name
+
+      // TODO: Drill down, filter data here.
+      if (d3.selectAll("." + lower_level).empty()) {
+        createPie(values);
+        d3.selectAll("." + lower_level)
+        .transition()
+        .duration(750)
+        .attr("transform", "translate(" + (initial_x + shift) + ",0)")
+        initial_x += shift;
+      } else {
+        // TODO: remove filter, add data back in.
+        if (lower_level == 'Claim1' && !d3.selectAll(".val1").empty()) {
+          d3.selectAll(".val1").remove();
+          initial_x -= shift;
+        }
+        d3.selectAll("." + lower_level).remove();
+        initial_x -= shift;
+      }
+    
+      d3.event.stopPropagation();});
+  }
+  </script>
+</body>
+</html>
+
