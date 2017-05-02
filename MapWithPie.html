@@ -441,6 +441,8 @@ polyline {
 	        	
 	        	if(list.indexOf(d.FullClaim1) != -1) {
 	        		return d.FullClaim1; // filter data for only values that were clicked on
+	        	} else {
+	        		return "N/A";
 	        	}
 
 	        })
@@ -471,13 +473,15 @@ polyline {
 			var obj = BinnedClaimCountTwo[i];
 			var state = obj.key; // get the state
 			var protestCount = obj.value.count; // get number of protests
+			
 			if(subtractUndefined) {
-				if( obj.value.values[0].key == "undefined") {
-					protestCount = protestCount - obj.value.values[0].value.count;
+				for(index in obj.value.values) {
+					var claim = obj.value.values[index];
+					if(claim.key == "N/A") {
+						protestCount -= claim.value.count;
+					}
 				}
-				if( obj.value.values.length > 1 && obj.value.values[1].key == "undefined") {
-					protestCount = protestCount - obj.value.values[1].value.count;
-				}
+				
 			}
 			stateProtestTwo[state] = protestCount;
 			maxValue = Math.max(maxValue,protestCount );	
