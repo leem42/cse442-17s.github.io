@@ -223,21 +223,21 @@ polyline {
       return {
         "name": "BinnedClaim",
         "count": v.length,
-        "subset": v,
+    //    "subset": v,
         "values": d3.nest()
         .key(function(d) { return d.FullClaim1; })
         .rollup(function(v) { 
           return { 
             "name": "FullClaim",
             "count": v.length, 
-            "subset": v,
+       //     "subset": v,
             "values": d3.nest()
             .key(function(d) { return d.val1; })
             .rollup(function(v) { 
               return {
                 "name": "val1",
                 "count": v.length,
-                "subset": v
+               // "subset": v
               };})
             .entries(v)
           }})
@@ -296,6 +296,7 @@ polyline {
       d3.select(this).style("stroke", "#fff");
       div.style("display", "none");
      });
+    
     if (level == 'BinnedClaim') {
       // http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde
       var text = svgPie.select(".labelName")
@@ -340,26 +341,65 @@ polyline {
     arc.on("click", function(d) {
       values = d.data.value.values // TODO:pass subset of data into modifyMap
       lower_level =  values[0].value.name
+      
 	   modifyMap(values, true)
       // TODO: Drill down, filter data here.
       if (d3.selectAll("." + lower_level).empty()) {
         createPie(values);
         d3.selectAll("." + lower_level)
         .transition()
-        .duration(500)
+        .duration(750)
         .attr("transform", "translate(" + (initial_x + shift) + ",0)")
         initial_x += shift;
+        
+        svg.select(".labelName")
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(500)
+        .style('opacity', 0.3);
+
+        svg.selectAll("polyline")
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(500)
+        .style('opacity', 0.02);
+
+        svg.selectAll("." + level)
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(250)
+        .style('opacity', 0.3);
+        
+        
       } else {
         // TODO: remove filter, add data back in.
         if (lower_level == 'FullClaim' && !d3.selectAll(".val1").empty()) {
           d3.selectAll(".val1").remove();
           initial_x -= shift;
         }
-        d3.selectAll("." + lower_level).remove();
-        initial_x -= shift;
-      }
-    
-    
+	   
+        if (lower_level == 'FullClaim') {
+        	console.log("Hello");
+            svg.select(".labelName")
+            .transition()
+            .delay(function(d,i) { return i * 10; })
+            .duration(500)
+            .style('opacity', 1);
+
+             svg.selectAll("polyline")
+            .transition()
+            .delay(function(d,i) { return i * 10; })
+            .duration(500)
+            .style('opacity', 0.3);
+            }
+            svg.selectAll("." + level)
+            .transition()
+            .delay(function(d,i) { return i * 10; })
+            .duration(250)
+            .style('opacity', 1);
+          d3.selectAll("." + lower_level).remove();
+          initial_x -= shift;
+        }
       d3.event.stopPropagation();});
   }
 
@@ -381,14 +421,11 @@ polyline {
 	
 	
 	var stateProtest = {};
-	var maxValue = -1000000;
-	var minValue = 1000000;
 	
 	
 	//Load in agriculture data
 	function modifyMap(data, subtractUndefined) {
 		
-		console.log(data);
 		var list = []
 		for (value in data){
 			list.push(data[value].key);
@@ -426,13 +463,14 @@ polyline {
 	      }; })
 	    .entries(GLOBAL_DATA);
 		
-		
  		var stateProtestTwo = {};
+ 		var maxValue = -1000000;
+ 		var minValue = 1000000;
+
  		for(var i = 0; i < BinnedClaimCountTwo.length; i++) {
  			
  			
 			var obj = BinnedClaimCountTwo[i];
-			console.log(obj);
 			var state = obj.key; // get the state
 			var protestCount = obj.value.count; // get number of protests
 			if(subtractUndefined) {
@@ -443,14 +481,13 @@ polyline {
 					protestCount = protestCount - obj.value.values[1].value.count;
 				}
 			}
-			
 			stateProtestTwo[state] = protestCount;
 			maxValue = Math.max(maxValue,protestCount );	
 			minValue = Math.min(minValue,protestCount );
 
  		}
+
 		colorByQuartile.domain([ minValue, maxValue / 5]);
-	
 	
 	//Load in GeoJSON data
 		d3.json("us-states.json", function(error, json) {
@@ -478,8 +515,47 @@ polyline {
 						}
 					}		
 			}
-
-
+	
+			
+			var updatedData = svg.selectAll("path")
+			.data(json.features);
+			
+			// Style enter set
+			updatedData.enter()
+			.append("path")
+			.attr("d", path)
+			.style("fill", function(d) {
+				//Get data value
+				var value = d.properties.value;
+				console.log(value);
+				if (value) {
+					//If value exists…
+					return colorByQuartile(value);
+				} else {
+					//If value is undefined…
+					return "#ccc";
+				}})
+			.on("mouseover",handleMouseOver)
+			.on("mouseout", handleMouseOut);
+			
+			// Style update set
+			updatedData.update()
+			.append("path")
+			.attr("d", path)
+			.style("fill", function(d) {
+				//Get data value
+				var value = d.properties.value;
+				console.log(value);
+				if (value) {
+					//If value exists…
+					return colorByQuartile(value);
+				} else {
+					//If value is undefined…
+					return "#ccc";
+				}})
+			.on("mouseover",handleMouseOver)
+			.on("mouseout", handleMouseOut);
+			
 		// If mouse hovers over a state then highlight it
 		function handleMouseOver(d, i) {  // Add interactivity
 			d3.select(this)
@@ -490,7 +566,7 @@ polyline {
 			.attr("transform", function(d) { return "translate(225, 275)"; })
 			.text(function() {
 				var out = d.properties.name;
-			return out;  
+				return out;  
 			});
 			svg.append("text")
 			.attr("transform", function(d) { return "translate(225, 300)"; })
@@ -505,26 +581,8 @@ polyline {
 				d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
 				svg.selectAll("text").remove();
 			}
+		})
 
-			svg.selectAll("path")
-			.data(json.features)
-			.enter()
-			.append("path")
-			.attr("d", path)
-			.on("mouseover",handleMouseOver)
-			.on("mouseout", handleMouseOut) 
-			.style("fill", function(d) {
-				//Get data value
-				var value = d.properties.value;
-				if (value) {
-					//If value exists…
-					return colorByQuartile(value);
-				} else {
-					//If value is undefined…
-					return "#ccc";
-				}});
-			
-			})
 	};
 
   </script>
