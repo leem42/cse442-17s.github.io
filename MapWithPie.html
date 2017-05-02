@@ -414,8 +414,6 @@ polyline {
 	var path = d3.geoPath().projection(projection);
 	
 	//Define quantize scale to sort data values into buckets of color
-	var colorByQuartile = d3.scaleQuantize()
-		.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
 		//colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
 	
 	
@@ -486,7 +484,11 @@ polyline {
 			minValue = Math.min(minValue,protestCount );
 
  		}
-
+		console.log(minValue);
+		console.log(maxValue);
+		var colorByQuartile = d3.scaleQuantize()
+		.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+	
 		colorByQuartile.domain([ minValue, maxValue / 5]);
 	
 	//Load in GeoJSON data
@@ -524,37 +526,25 @@ polyline {
 			updatedData.enter()
 			.append("path")
 			.attr("d", path)
+			.merge(updatedData)
 			.style("fill", function(d) {
 				//Get data value
 				var value = d.properties.value;
-				console.log(value);
-				if (value) {
+				if (value || value == 0) {
 					//If value exists…
 					return colorByQuartile(value);
 				} else {
+					
 					//If value is undefined…
 					return "#ccc";
 				}})
 			.on("mouseover",handleMouseOver)
 			.on("mouseout", handleMouseOut);
 			
+			updatedData.exit().remove();
+			
 			// Style update set
-			updatedData.update()
-			.append("path")
-			.attr("d", path)
-			.style("fill", function(d) {
-				//Get data value
-				var value = d.properties.value;
-				console.log(value);
-				if (value) {
-					//If value exists…
-					return colorByQuartile(value);
-				} else {
-					//If value is undefined…
-					return "#ccc";
-				}})
-			.on("mouseover",handleMouseOver)
-			.on("mouseout", handleMouseOut);
+		
 			
 			
 		// If mouse hovers over a state then highlight it
@@ -581,6 +571,7 @@ polyline {
 			function handleMouseOut(d,i) {
 				d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
 				svg.selectAll("text").remove();
+
 			}
 		})
 
