@@ -190,18 +190,21 @@ polyline {
       return {
         "name": "BinnedClaim",
         "count": v.length,
+        "subset": v,
         "values": d3.nest()
         .key(function(d) { return d.claim1; })
         .rollup(function(v) { 
           return { 
             "name": "Claim1",
             "count": v.length, 
+            "subset": v,
             "values": d3.nest()
             .key(function(d) { return d.val1; })
             .rollup(function(v) { 
               return {
                 "name": "val1",
-                "count": v.length
+                "count": v.length,
+                "subset": v
               };})
             .entries(v)
           }})
@@ -298,7 +301,7 @@ polyline {
     d3.selectAll("." + level)
     .attr("transform", "translate(" + (initial_x + 10) + ",0)")
     arc.on("click", function(d) {
-      values = d.data.value.values
+      values = d.data.value.values // TODO:pass subset of data into modifyMap
       lower_level =  values[0].value.name
 
       // TODO: Drill down, filter data here.
