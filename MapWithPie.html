@@ -437,41 +437,40 @@ polyline {
 		}
 
 		// go through data and group by value for each state if that value was in the clicked claim list
-		var BinnedClaimCountTwo;
-		if (level == "FullClaim") {
-			BinnedClaimCountTwo = d3.nest()
-		    .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
-		    .rollup(function(v) { 
-		      return {
-		        "name": "StateAbbreviation",
-		        "count": v.length,
-		        "values": d3.nest()
-		        .key(function(d) { 
-		        	
-		        	if(list.indexOf(d.FullClaim1) != -1) {
-		        		return d.FullClaim1; // filter data for only values that were clicked on
-		        	}
 
-		        })
-		        .rollup(function(v) { 
-		          return { 
-		            "name": "Claim",
-		            "count": v.length 
-		            // "values": d3.nest()
-		            // .key(function(d) { return d.val1; })
-		            // .rollup(function(v) { 
-		            //   return {
-		            //     "name": "val1",
-		            //     "count": v.length
-		            //   };})
-		            // .entries(v)
-		          }})
-		        .entries(v)
-		      }; })
-	    	.entries(GLOBAL_DATA);
-	    } else {
+		var BinnedClaimCountTwo = d3.nest()
+	    .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
+	    .rollup(function(v) { 
+	      return {
+	        "name": "StateAbbreviation",
+	        "count": v.length,
+	        "values": d3.nest()
+	        .key(function(d) { 
+	        	
+	        	if(list.indexOf(d.FullClaim1) != -1) {
+	        		return d.FullClaim1; // filter data for only values that were clicked on
+	        	} else {
+	        		return "N/A";
+	        	}
 
-	    }
+	        })
+	        .rollup(function(v) { 
+	          return { 
+	            "name": "Claim",
+	            "count": v.length, 
+	            "values": d3.nest()
+	            .key(function(d) { return d.val1; })
+	            .rollup(function(v) { 
+	              return {
+	                "name": "val1",
+	                "count": v.length
+	              };})
+	            .entries(v)
+	          }})
+	        .entries(v)
+	      }; })
+	    .entries(GLOBAL_DATA);
+
 		
  		var stateProtestTwo = {};
  		var maxValue = -1000000;
@@ -483,13 +482,15 @@ polyline {
 			var obj = BinnedClaimCountTwo[i];
 			var state = obj.key; // get the state
 			var protestCount = obj.value.count; // get number of protests
+			
 			if(subtractUndefined) {
-				if( obj.value.values[0].key == "undefined") {
-					protestCount = protestCount - obj.value.values[0].value.count;
+				for(index in obj.value.values) {
+					var claim = obj.value.values[index];
+					if(claim.key == "N/A") {
+						protestCount -= claim.value.count;
+					}
 				}
-				if( obj.value.values.length > 1 && obj.value.values[1].key == "undefined") {
-					protestCount = protestCount - obj.value.values[1].value.count;
-				}
+				
 			}
 			stateProtestTwo[state] = protestCount;
 			maxValue = Math.max(maxValue,protestCount );	
