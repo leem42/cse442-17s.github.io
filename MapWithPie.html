@@ -182,8 +182,41 @@ polyline {
   var outerPolyline = d3.arc()
   .innerRadius(radius * 0.9)
   .outerRadius(radius * 0.9);
-
+  
+  
+  var stateProtest = {};
+  var GLOBAL_DATA;
   d3.csv("ConciseProtestDataCSV.csv", function(data) {
+	  // Make two dictionaries
+	  // 1) One with the full claims 
+	  // 2) One with abbreviated claims
+	  // Then when update is called-- will traverse one or the other
+	  
+	  GLOBAL_DATA = data;
+	  
+	// Create global dict for referencing the map later  
+	  for(var i = 0; i < data.length; i++) {
+					// Must go through each state and each event for that state and then count the number of 
+					// protests for that state
+			var state = data[i].StateAbbreviation;
+			var protestClaim = data[i].BinnedClaim1;
+			
+			// check if that state has been viewed before
+			if (!stateProtest.hasOwnProperty(state) ) {
+				stateProtest[state] = {};
+			}
+			// check if that protest has been recorded in that state before
+			if(!stateProtest[state].hasOwnProperty(protestClaim)) {
+				stateProtest[state][protestClaim] = 0;
+
+			} 
+			// state --> protest label --> number of that label
+			// add +1 to to the state-protest pair count
+			stateProtest[state][protestClaim] = stateProtest[state][protestClaim] + 1;
+					
+	}
+	  
+    // Begin Rolling up
     var BinnedClaimCount = d3.nest()
     .key(function(d) { return d.BinnedClaim1; }) // {claim1 : subdivClaim1: Yes No }
     .rollup(function(v) { 
@@ -191,10 +224,10 @@ polyline {
         "name": "BinnedClaim",
         "count": v.length,
         "values": d3.nest()
-        .key(function(d) { return d.claim1; })
+        .key(function(d) { return d.FullClaim1; })
         .rollup(function(v) { 
           return { 
-            "name": "Claim1",
+            "name": "FullClaim",
             "count": v.length, 
             "values": d3.nest()
             .key(function(d) { return d.val1; })
@@ -208,7 +241,10 @@ polyline {
         .entries(v)
       }; })
     .entries(data);
-
+    
+    
+    
+    modifyMap(BinnedClaimCount, false);
     createPie(BinnedClaimCount);
 
     var polyline = svgPie.select(".lines")
@@ -236,6 +272,7 @@ polyline {
   var shift = 100;
 
   function createPie(pie_info) {
+	  
     var level = pie_info[0].value.name;
     var arc = g.selectAll(".arc " + level)
     .data(pie(pie_info))
@@ -300,7 +337,7 @@ polyline {
     arc.on("click", function(d) {
       values = d.data.value.values
       lower_level =  values[0].value.name
-
+	   modifyMap(values, true)
       // TODO: Drill down, filter data here.
       if (d3.selectAll("." + lower_level).empty()) {
         createPie(values);
@@ -311,7 +348,7 @@ polyline {
         initial_x += shift;
       } else {
         // TODO: remove filter, add data back in.
-        if (lower_level == 'Claim1' && !d3.selectAll(".val1").empty()) {
+        if (lower_level == 'FullClaim' && !d3.selectAll(".val1").empty()) {
           d3.selectAll(".val1").remove();
           initial_x -= shift;
         }
@@ -343,60 +380,85 @@ polyline {
 	var stateProtest = {};
 	var maxValue = -1000000;
 	var minValue = 1000000;
+	
+	
 	//Load in agriculture data
-	d3.csv("http://localhost:8000/ConciseProtestDataCSV.csv", function(error,data) {
-		if( error ) {
-			throw error;
-		}
-	
-	//Set input domain for colorByQuartile scale
-		for(var i = 0; i < data.length; i++) {
-	// Must go through each state and each event for that state and then count the number of 
-	// protests for that state
-			var state = data[i].StateAbbreviation;
-			var protestClaim = data[i].BinnedClaim1;
-	
-			// check if that state has been viewed before
-			if (!stateProtest.hasOwnProperty(state) ) {
-				stateProtest[state] = {};
-			}
-			// check if that protest has been recorded in that state before
-			if(!stateProtest[state].hasOwnProperty(protestClaim)) {
-				stateProtest[state][protestClaim] = 0;
-			} 
-			// state --> protest label --> number of that label
-			// add +1 to to the state-protest pair count
-			stateProtest[state][protestClaim] = stateProtest[state][protestClaim] + 1;
-			
-			}
-	
-		// Get Aggregate Counts of Total Protests for Each State
-			for(var state in stateProtest) {
-				var sum = 0;
-				for(protest in stateProtest[state]) {
-					sum+=stateProtest[state][protest];
-				}
-				// for setting up the chloropleth colorByQuartile scheme
-				maxValue = Math.max(maxValue,sum );	
-				minValue = Math.min(minValue,sum );
-				
-				stateProtest[state]['Total'] = sum;
-			}
+	function modifyMap(data, subtractUndefined) {
 		
-	
-			colorByQuartile.domain([ minValue, 1000]);
+		console.log(data);
+		var list = []
+		for (value in data){
+			list.push(data[value].key);
+		}
+		
+		// go through data and group by value for each state if that value was in the clicked claim list
+		var BinnedClaimCountTwo = d3.nest()
+	    .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
+	    .rollup(function(v) { 
+	      return {
+	        "name": "StateAbbreviation",
+	        "count": v.length,
+	        "values": d3.nest()
+	        .key(function(d) { 
+	        	
+	        	if(list.indexOf(d.FullClaim1) != -1) {
+	        		return d.FullClaim1; // filter data for only values that were clicked on
+	        	}
+
+	        })
+	        .rollup(function(v) { 
+	          return { 
+	            "name": "Claim",
+	            "count": v.length, 
+	            "values": d3.nest()
+	            .key(function(d) { return d.val1; })
+	            .rollup(function(v) { 
+	              return {
+	                "name": "val1",
+	                "count": v.length
+	              };})
+	            .entries(v)
+	          }})
+	        .entries(v)
+	      }; })
+	    .entries(GLOBAL_DATA);
+		
+		
+ 		var stateProtestTwo = {};
+ 		for(var i = 0; i < BinnedClaimCountTwo.length; i++) {
+ 			
+ 			
+			var obj = BinnedClaimCountTwo[i];
+			console.log(obj);
+			var state = obj.key; // get the state
+			var protestCount = obj.value.count; // get number of protests
+			if(subtractUndefined) {
+				if( obj.value.values[0].key == "undefined") {
+					protestCount = protestCount - obj.value.values[0].value.count;
+				}
+				if( obj.value.values.length > 1 && obj.value.values[1].key == "undefined") {
+					protestCount = protestCount - obj.value.values[1].value.count;
+				}
+			}
+			
+			stateProtestTwo[state] = protestCount;
+			maxValue = Math.max(maxValue,protestCount );	
+			minValue = Math.min(minValue,protestCount );
+
+ 		}
+		colorByQuartile.domain([ minValue, maxValue / 5]);
 	
 	
 	//Load in GeoJSON data
-			d3.json("us-states.json", function(error, json) {
-				if(error) {
-					throw error;
-				}
-				//Merge the ag. data and GeoJSON
-				//Loop through once for each ag. data value
-				for (var state in stateProtest) {
-					//Grab cumalative number of protests for the state 
-					var dataValue = stateProtest[state]['Total'];
+		d3.json("us-states.json", function(error, json) {
+			if(error) {
+				throw error;
+			}
+			//Merge the ag. data and GeoJSON
+			//Loop through once for each ag. data value
+			for (var state in stateProtestTwo) {
+				//Grab cumalative number of protests for the state 
+				var dataValue = stateProtestTwo[state];
 
 				//Find the corresponding state inside the GeoJSON
 				for (var j = 0; j < json.features.length; j++) {
@@ -412,68 +474,55 @@ polyline {
 						break;
 						}
 					}		
-				}
-	
-	
-			// If mouse hovers over a state then highlight it
-			function handleMouseOver(d, i) {  // Add interactivity
-				d3.select(this)
-				.style("fill","rgb(0,0,255)");
-			
-				// Specify where to put label of text
-				svg.append("text")
-				.attr("transform", function(d) { return "translate(225, 275)"; })
-				// .attr({
-				//    id: d.value,  
-				//     x: 225,
-				//     y: 275 
-				// }) // show the statename
-				.text(function() {
-					var out = d.properties.name;
-				return out;  
-				});
-				svg.append("text")
-				// .attr({
-				//     id: d.value, 
-				//      x: 225,
-				//      y: 300 
-				//  }) // show the value for that state
-				.attr("transform", function(d) { return "translate(225, 300)"; })
-				 .text(function() {
-						var out = "Total Protests:" + d.properties.value;
-				   return out;  // Value of the text
-				 });
-				}
-	
-	
-				function handleMouseOut(d,i) {
+			}
+
+
+		// If mouse hovers over a state then highlight it
+		function handleMouseOver(d, i) {  // Add interactivity
+			d3.select(this)
+			.style("fill","rgb(0,0,255)");
+		
+			// Specify where to put label of text
+			svg.append("text")
+			.attr("transform", function(d) { return "translate(225, 275)"; })
+			.text(function() {
+				var out = d.properties.name;
+			return out;  
+			});
+			svg.append("text")
+			.attr("transform", function(d) { return "translate(225, 300)"; })
+			 .text(function() {
+					var out = "Total Protests:" + d.properties.value;
+			   return out;  // Value of the text
+			 });
+			}
+
+
+			function handleMouseOut(d,i) {
 				d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
 				svg.selectAll("text").remove();
-				}
-	
-				svg.selectAll("path")
-				.data(json.features)
-				.enter()
-				.append("path")
-				.attr("d", path)
-				.on("mouseover",handleMouseOver)
-				.on("mouseout", handleMouseOut) 
-				.style("fill", function(d) {
+			}
+
+			svg.selectAll("path")
+			.data(json.features)
+			.enter()
+			.append("path")
+			.attr("d", path)
+			.on("mouseover",handleMouseOver)
+			.on("mouseout", handleMouseOut) 
+			.style("fill", function(d) {
 				//Get data value
 				var value = d.properties.value;
-				
 				if (value) {
 					//If value exists…
 					return colorByQuartile(value);
 				} else {
 					//If value is undefined…
 					return "#ccc";
-				}
-			});
+				}});
 			
-			});
-			
-			});
+			})
+	};
 
   </script>
 </body>
