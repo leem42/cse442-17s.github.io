@@ -151,9 +151,6 @@ polyline{
             return [innerPolyline.centroid(d2), outerPolyline.centroid(d2), pos];
         };
     });
-
-     polyline.exit()
-    .remove();
   }); 
 
   var initial_x = 0;
@@ -212,6 +209,24 @@ polyline{
             return (d.data.key);
         });
     } else {
+      svg.select(".labelName")
+      .transition()
+      .delay(function(d,i) { return i * 10; })
+      .duration(500)
+      .style('opacity', 0.1);
+
+      svg.selectAll("polyline")
+      .transition()
+      .delay(function(d,i) { return i * 10; })
+      .duration(500)
+      .style('opacity', 0.1);
+
+       svg.selectAll(".BinnedClaim")
+      .transition()
+      .delay(function(d,i) { return i * 10; })
+      .duration(500)
+      .style('opacity', 0.2);
+
       arc.append("text")
       .attr("transform", function(d) { return "translate(" + innerLabel.centroid(d) + ")"; })
       .attr("dy", "0.35em")
@@ -235,10 +250,30 @@ polyline{
         initial_x += shift;
       } else {
         // TODO: remove filter, add data back in.
+
         if (lower_level == 'Claim1' && !d3.selectAll(".val1").empty()) {
           d3.selectAll(".val1").remove();
           initial_x -= shift;
-        }
+        } 
+        if (lower_level == 'Claim1') {
+          svg.select(".labelName")
+          .transition()
+          .delay(function(d,i) { return i * 10; })
+          .duration(500)
+          .style('opacity', 1);
+
+           svg.selectAll("polyline")
+          .transition()
+          .delay(function(d,i) { return i * 10; })
+          .duration(500)
+          .style('opacity', 0.3);
+
+          svg.selectAll(".BinnedClaim")
+          .transition()
+          .delay(function(d,i) { return i * 10; })
+          .duration(500)
+          .style('opacity', 1);
+          }
         d3.selectAll("." + lower_level).remove();
         initial_x -= shift;
       }
