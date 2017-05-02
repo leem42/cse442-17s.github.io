@@ -177,6 +177,7 @@ polyline{
       d3.select(this).style("stroke", "#fff");
       div.style("display", "none");
      });
+
     if (level == 'BinnedClaim') {
       // http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde
       var text = svg.select(".labelName")
@@ -209,23 +210,7 @@ polyline{
             return (d.data.key);
         });
     } else {
-      svg.select(".labelName")
-      .transition()
-      .delay(function(d,i) { return i * 10; })
-      .duration(500)
-      .style('opacity', 0.1);
-
-      svg.selectAll("polyline")
-      .transition()
-      .delay(function(d,i) { return i * 10; })
-      .duration(500)
-      .style('opacity', 0.1);
-
-       svg.selectAll(".BinnedClaim")
-      .transition()
-      .delay(function(d,i) { return i * 10; })
-      .duration(500)
-      .style('opacity', 0.2);
+      
 
       arc.append("text")
       .attr("transform", function(d) { return "translate(" + innerLabel.centroid(d) + ")"; })
@@ -248,6 +233,25 @@ polyline{
         .duration(750)
         .attr("transform", "translate(" + (initial_x + shift) + ",0)")
         initial_x += shift;
+
+        svg.select(".labelName")
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(500)
+        .style('opacity', 0.3);
+
+        svg.selectAll("polyline")
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(500)
+        .style('opacity', 0.02);
+
+        svg.selectAll("." + level)
+        .transition()
+        .delay(function(d,i) { return i * 10; })
+        .duration(250)
+        .style('opacity', 0.3);
+
       } else {
         // TODO: remove filter, add data back in.
 
@@ -267,13 +271,12 @@ polyline{
           .delay(function(d,i) { return i * 10; })
           .duration(500)
           .style('opacity', 0.3);
-
-          svg.selectAll(".BinnedClaim")
+          }
+          svg.selectAll("." + level)
           .transition()
           .delay(function(d,i) { return i * 10; })
-          .duration(500)
+          .duration(250)
           .style('opacity', 1);
-          }
         d3.selectAll("." + lower_level).remove();
         initial_x -= shift;
       }
