@@ -22,7 +22,7 @@
   stroke-opacity: 0.5;
   stroke-width: 5;
   filter: drop-shadow(16px 16px 20px blue);*/
-  filter: url(#soft-filter);
+  filter: url(#glow-filter);
 }
 
 </style>
@@ -30,36 +30,39 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
-//var formatDate = d3.time.format("%Y");
+// Will hold the current selection
+var GLOBAL_TIME_FILTER = null;
+
+// Will parse dates as a year value.
 var parseDate = d3.timeParse("%Y");
-var timeFilter = null;
 
-
+// Dimensions for the SVG image.
 var margin = {top: 200, right: 40, bottom: 200, left: 40},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
+// Create a scale for the timeline
 var x = d3.scaleTime()
-    //.domain([new Date(1959, 12, 20), new Date(1980, 1, 1)])
     .rangeRound([0, width]);
 
+// Create the svg element
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+// Load data and draw the image.
 d3.csv("./dummy_year_data.csv", function(error, data) {
   if (error) throw error;
-  // format the data
+
+  // Format the data.
   data.forEach(function(d) {
       d.year = parseDate(d.year);
       d.val = +d.val;
   });
 
-
-
-  // Scale the range of the data
+  // Set the width and tick marks to go off of the data range.
   x.domain(d3.extent(data, function(d) { return d.year; }));
 
   // Make the tall white tick marks
@@ -73,7 +76,7 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
     //.selectAll(".tick")
     //  .classed("tick--minor", function(d) { return d.getYears(); });
 
-  // Draw the year labels (TODO how do you mark the first one?)
+  // Draw the year labels
   svg.append("g")
       .attr("class", "axis axis--x")
       .attr("transform", "translate(0," + height + ")")
@@ -86,23 +89,11 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
 
  
 
-    // filters go in defs element
-var defs = svg.append("defs");
+  // Create the glow filter.
+  var defs = svg.append("defs");
 
-
-/*
-
-<filter id="glow">
-    <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-    <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-    </feMerge>
-</filter>*/
-
-
-  var soft_filter = defs.append("filter")
-    .attr("id", "soft-filter")
+  var glow_filter = defs.append("filter")
+    .attr("id", "glow-filter")
     //.attr("height", "130%");
     .attr("height", "300%")
     .attr("width", "300%")
@@ -113,22 +104,23 @@ var defs = svg.append("defs");
     <!-- Thicken out the original shape -->
     <feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />*/
 
-  soft_filter.append("feMorphology")
+  glow_filter.append("feMorphology")
     .attr("operator", "dilate")
     .attr("radius", "4")
     .attr("in", "SourceAlpha")
     .attr("result", "thicken");
 
-  soft_filter.append("feGaussianBlur")
+  glow_filter.append("feGaussianBlur")
     .attr("in", "thicken")
     .attr("stdDeviation", "10")
     .attr("result", "blurred");
 
-  soft_filter.append("feFlood")
-    .attr("flood-color", "rgb(0,186,255)")
+  glow_filter.append("feFlood")
+    //.attr("flood-color", "rgb(249, 245, 194)")
+    .attr("flood-color", "rgb(249, 249, 139)")
     .attr("result", "glowColor");
 
-  soft_filter.append("feComposite")
+  glow_filter.append("feComposite")
     .attr("in", "glowColor")
     .attr("in2", "blurred")
     .attr("operator", "in")
@@ -136,141 +128,13 @@ var defs = svg.append("defs");
 
   // overlay original SourceGraphic over translated blurred opacity by using
   // feMerge filter. Order of specifying inputs is important!
-  var soft_feMerge = soft_filter.append("feMerge");
+  var glow_feMerge = glow_filter.append("feMerge");
 
-  soft_feMerge.append("feMergeNode")
+  glow_feMerge.append("feMergeNode")
       .attr("in", "softGlow_colored")
-  soft_feMerge.append("feMergeNode")
+  glow_feMerge.append("feMergeNode")
       .attr("in", "SourceGraphic");
 
-
-
-  /*var soft_filter = defs.append("filter")
-    .attr("id", "soft-filter")
-    .attr("height", "300%")
-    .attr("width", "300%")
-    .attr("x", "-75%")
-    .attr("y", "-75%");
-
-  soft_filter.append("feMorphology")
-    .attr("operator", "dilate")
-    .attr("radius", "4")
-    .attr("in", "SourceAlpha")
-    .attr("result", "thicken");
-
-  soft_filter.append("feGaussianBlur")
-    .attr("in", "thicken")
-    .attr("stdDeviation", "10")
-    .attr("result", "blurred");
-
-  soft_filter.append("feFlood")
-    .attr("flood-color", "rgb(0,186,255)")
-    .attr("result", "glowColor");
-
-  soft_filter.append("feComposite")
-    .attr("in", "glowColor")
-    .attr("in2", "blurred")
-    .attr("operator", "in")
-    .attr("result", "softGlow_colored");
-
-  // overlay original SourceGraphic over translated blurred opacity by using
-  // feMerge filter. Order of specifying inputs is important!
-  var soft_feMerge = soft_filter.append("feMerge");
-
-  soft_feMerge.append("feMergeNode")
-      .attr("in", "softGlow_colored")
-  soft_feMerge.append("feMergeNode")
-      .attr("in", "SourceGraphic");*/
-
-    /*<!-- Thicken out the original shape -->
-    <feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />
-
-    <!-- Use a gaussian blur to create the soft blurriness of the glow -->
-    <feGaussianBlur in="thicken" stdDeviation="10" result="blurred" />
-
-    <!-- Change the colour -->
-    <feFlood flood-color="rgb(0,186,255)" result="glowColor" />
-
-    <!-- Color in the glows -->
-    <feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" />
-
-    <!--  Layer the effects together -->
-    <feMerge>
-      <feMergeNode in="softGlow_colored"/>
-      <feMergeNode in="SourceGraphic"/>
-    </feMerge>
-
-  </filter>
-
-</defs>*/
-
-// create filter with id #drop-shadow
-// height=130% so that the shadow is not clipped
-var glow_filter = defs.append("filter")
-    .attr("id", "glow")
-    .attr("height", "130%");
-
-// SourceAlpha refers to opacity of graphic that this filter will be applied to
-// convolve that with a Gaussian with standard deviation 3 and store result
-// in blur
-glow_filter.append("feGaussianBlur")
-    .attr("in", "SourceAlpha")
-    .attr("stdDeviation", 2.5)
-    .attr("result", "coloredBlur");
-
-
-// overlay original SourceGraphic over translated blurred opacity by using
-// feMerge filter. Order of specifying inputs is important!
-var glow_feMerge = glow_filter.append("feMerge");
-
-glow_feMerge.append("feMergeNode")
-    .attr("in", "coloredBlur")
-glow_feMerge.append("feMergeNode")
-    .attr("in", "SourceGraphic");
-
-
-
-// create filter with id #drop-shadow
-// height=130% so that the shadow is not clipped
-var filter = defs.append("filter")
-    .attr("id", "drop-shadow")
-    .attr("height", "130%");
-
-// SourceAlpha refers to opacity of graphic that this filter will be applied to
-// convolve that with a Gaussian with standard deviation 3 and store result
-// in blur
-filter.append("feGaussianBlur")
-    .attr("in", "SourceAlpha")
-    .attr("stdDeviation", 5)
-    .attr("result", "blur");
-
-// translate output of Gaussian blur to the right and downwards with 2px
-// store result in offsetBlur
-/*filter.append("feOffset")
-    .attr("in", "blur")
-    .attr("dx", 5)
-    .attr("dy", 5)
-    .attr("result", "offsetBlur");*/
-
-// overlay original SourceGraphic over translated blurred opacity by using
-// feMerge filter. Order of specifying inputs is important!
-var feMerge = filter.append("feMerge");
-
-feMerge.append("feMergeNode")
-    .attr("in", "offsetBlur")
-feMerge.append("feMergeNode")
-    .attr("in", "SourceGraphic");
-
-// for each rendered node, apply #drop-shadow filter
-/*var item = svg.selectAll("rect")
-    .data(items)
-  .enter().append("rect")
-    .attr("width", 170)
-    .attr("height", 100)
-    .attr("fill", "steelblue")
-    .attr("stroke-width", 2)
-    .style("filter", "url(#drop-shadow)")
-    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });*/
 
    // Draw the brush.
   svg.append("g")
@@ -292,7 +156,7 @@ feMerge.append("feMergeNode")
 function brushended() {
   if (!d3.event.sourceEvent) return; // Only transition after input.
   if (!d3.event.selection) return; // Ignore empty selections.
-  console.log('prev time filter: ', timeFilter);
+  console.log('prev time filter: ', GLOBAL_TIME_FILTER);
   var d0 = d3.event.selection.map(x.invert),
       d1 = d0.map(d3.timeYear.round);
 
@@ -304,7 +168,7 @@ function brushended() {
 
   console.log('d0: ', d0);
   console.log('d1: ', d1);
-  timeFilter = d1;
+  GLOBAL_TIME_FILTER = d1;
 
 
 
