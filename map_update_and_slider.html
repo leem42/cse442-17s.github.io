@@ -77,29 +77,6 @@
     // Will parse dates as a year value.
     var parseDate = d3.timeParse("%Y");
     
- 
-
-    /******************* INITIALIZE SLIDER VARIABLES *******************/
-
-     // Dimensions for the SVG image.
-    var sliderMargin = {top: 200, right: 40, bottom: 200, left: 40},
-        sliderWidth = 960 - sliderMargin.left - sliderMargin.right,
-        sliderHeight = 500 - sliderMargin.top - sliderMargin.bottom;
-    //Create SVG element
-
-    // Create a scale for the timeline
-    var sliderX = d3.scaleTime()
-        .rangeRound([0, sliderWidth]);
-
-    // Create the svg element
-    var sliderSVG = d3.select("body").append("svg")
-        .attr('id', 'slider-svg')
-        .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
-        .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
-      .append("g")
-        .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
-
-    /*********************** INITIALIZE MAP VARIABLES *******************/
     var us_state_abbrev = {
       'Alabama': 'AL',
       'Alaska': 'AK',
@@ -171,6 +148,29 @@
     
     // Define path generator
     var path = d3.geoPath().projection(projection);
+
+
+    /******************* INITIALIZE SLIDER VARIABLES *******************/
+
+     // Dimensions for the SVG image.
+    var sliderMargin = {top: 200, right: 40, bottom: 200, left: 40},
+        sliderWidth = 960 - sliderMargin.left - sliderMargin.right,
+        sliderHeight = 500 - sliderMargin.top - sliderMargin.bottom;
+    //Create SVG element
+
+    // Create a scale for the timeline
+    var sliderX = d3.scaleTime()
+        .rangeRound([0, sliderWidth]);
+
+    // Create the svg element
+    var sliderSVG = d3.select("body").append("svg")
+        .attr('id', 'slider-svg')
+        .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
+        .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
+
+    /*********************** INITIALIZE MAP VARIABLES *******************/
     
     /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
 
