@@ -440,12 +440,14 @@
     function inYearFilter(eventYear) {
       if (eventYear === null) return false;
 
-      console.log(eventYear);
-      if(typeof eventYear == 'date') {
-    	  
+      if(typeof eventYear.getFullYear === 'function') {
+    	  return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
+          eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+      } else {
+    	  var year = parseFloat(eventYear.substring(0,4));
+    	  return year >= GLOBAL_TIME_FILTER[0].getFullYear() && year < GLOBAL_TIME_FILTER[1].getFullYear();
       }
-      return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
-        eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+      
     }
 
     function inTopicFilter(topicTitle) {
@@ -552,24 +554,23 @@
     function updateMap() {
       // need to update the colorByQuartile method
       console.log("UpdateMap Called");
-      console.log(GLOBAL_JSON_DATA);
-      
       
       var newData = GLOBAL_JSON_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
-        	 var filteredDict;
-	       	filteredDict = d.properties.dictionary.values;
-	       	 
-            filteredDict = filteredDict.filter( 
+        	console.log(d.properties.name);
+        	 var filteredDict = d.properties.dictionary.values.filter( 
               function(element) {
                 return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
               }
             );
-            d.properties.dictionary.values = filteredDict;
+        	 console.log("SPACE")
+         	console.log(d.properties.name);
+        	 d.properties.dictionary.values = filteredDict;
             return d; 
         }
       }); 
-      GLOBAL_JSON_DATA = COPY_GLOBAL_DATA;
+      GLOBAL_JSON_DATA = JSON.parse(JSON.stringify(COPY_GLOBAL_DATA));
+      
       var updatedData = mapSVG.selectAll("path")
         .data(newData);
       
@@ -579,9 +580,7 @@
         .merge(updatedData)
         .style("fill", function(d) {
           //Get data value
-          var value = 0;
-  		  value = d.properties.dictionary.values.length;
-           
+          var value = d.properties.dictionary.values.length;
           if (value || value == 0) {
               //If value exists…
               return colorByQuartile(value);
