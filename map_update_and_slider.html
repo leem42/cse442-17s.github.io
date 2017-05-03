@@ -388,8 +388,6 @@
             var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
 
             if (state == jsonState) {
-              console.log(state);
-              console.log(jsonState);
               json.features[j].properties.name = jsonState;
               json.features[j].properties.dictionary = dataValue;
               
@@ -557,24 +555,23 @@
       
       var newData = GLOBAL_JSON_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
-        	console.log(d.properties.name);
         	 var filteredDict = d.properties.dictionary.values.filter( 
               function(element) {
                 return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
               }
             );
-        	 console.log("SPACE")
-         	console.log(d.properties.name);
         	 d.properties.dictionary.values = filteredDict;
             return d; 
         }
       }); 
       GLOBAL_JSON_DATA = JSON.parse(JSON.stringify(COPY_GLOBAL_DATA));
       
+      mapSVG.selectAll("path").remove();
+
       var updatedData = mapSVG.selectAll("path")
         .data(newData);
       
-      updatedData.enter()
+        updatedData.enter()
         .append("path")
         .attr("d", path)
         .merge(updatedData)
@@ -589,6 +586,8 @@
               return "#ccc";
           }
         })
+      .on("mouseover",handleMouseOver)
+      .on("mouseout", handleMouseOut);
       updatedData.exit().remove();
     };
 
