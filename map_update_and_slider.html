@@ -225,12 +225,23 @@
           d.year = d.evyy === null ? d.rptyy : d.evyy;
 
           if (d.year === null) {
+            console.log('***************');
             console.log('NULL DATE');
             console.log('index', i);
             console.log('eventid', d.eventid);
             console.log('evyy', d.evyy);
             console.log('rptyy', d.rptyy);
             console.log('year', d.year);
+          } else if (d.year.getFullYear() < 1960) {
+            console.log('***************');
+            console.log('YEAR NOT A DATE');
+            console.log('index', i);
+            console.log('eventid', d.eventid);
+            console.log('evyy', d.evyy);
+            console.log('rptyy', d.rptyy);
+            console.log('year', d.year);
+            // In the mean time set this poorly formatted year to null.
+            d.year = null;
           }
           // do I need to include the rest here?
       });
@@ -243,7 +254,7 @@
       // This will set the width and tick marks to go off of the data range.
       // We will be showing all the data by default, so set the first filter
       // to be the full year domain in the data.
-      sliderX.domain(d3.extent(data, function(d) { return d.evyy; }));
+      sliderX.domain(d3.extent(data, function(d) { return d.year }));
       GLOBAL_TIME_FILTER = sliderX.domain();
 
       // Make the tall white tick marks
@@ -409,57 +420,7 @@
         // Test Map Update Step
         updateMap(); 
 
-        // Updates the map to reflect the current global filters
-        function updateMap() {
-          console.log('mapSVG', mapSVG);
-          // need to update the colorByQuartile method
-          
-          var newData = json.features.filter(function(d) {
-            if(d.properties.dictionary) {
-                var filteredDict = d.properties.dictionary.values.filter( 
-                  function(element) {
-                    //console.log(element);
-                    //var eventYear =  element.evyy);
-                    //var year = parseFloat(element["evyy"]);
-                    /*if(parent != "N\A") {
-                      return element.BinnedClaim1 == parent && eventYear.getFullYear() > GLOBAL_TIME_FILTER[0].getFullYear() && eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
-                    } else {
-                      return year > timeStart && year < timeEnd;                
-                    }*/
-                    return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
-                  }
-                );
-                d.properties.dictionary = filteredDict;
-                return d; 
-             }
-          }); 
-          
-          var map_internal_svg = d3.selectAll('#map-svg');
-          console.log('map internal', map_internal_svg);
-          var updatedData = mapSVG.selectAll("path")
-            .data(newData.features);
-          
-          updatedData.enter()
-            .append("path")
-            .attr("d", path)
-            .merge(updatedData)
-            .style("fill", function(d) {
-              //Get data value
-              if(d.properties.dictionary) {
-                var value = d.properties.dictionary.length;
-                if (value || value == 0) {
-                  //If value exists…
-                  return colorByQuartile(value);
-                } else {
-                  
-                  //If value is undefined…
-                  return "#ccc";
-                }
-              }
-            });
 
-          updatedData.exit().remove();
-        }
         
       });
     });
@@ -468,6 +429,20 @@
 
 
     /*@@@@@@@@@@@@@@@@@@@@@@@ HELPER FUNCTIONS @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
+    /************************** COMMON HELPER FUNCTIONS *********************/
+    // Returns true if the given eventYear Date object is within the current year filter
+    // otherwise returns false.
+    function inYearFilter(eventYear) {
+      if (eventYear === null) return false;
+
+      return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
+        eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+    }
+
+    function inTopicFilter(topicTitle) {
+      return GLOBAL_TOPIC_FILTER === null || GLOBAL_TOPIC_FILTER == topicTitle;
+    }
 
     /************************** SLIDER HELPER FUNCTIONS *********************/
 
@@ -526,8 +501,13 @@
       //  the entire span is brushed.
       d3.select(this).transition().call(d3.event.target.move, spanToBrush);
       GLOBAL_TIME_FILTER = newFilter;
+      console.log('new filter', GLOBAL_TIME_FILTER);
       d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor)
           .classed("move-enabled", partialSpanIsBrushed);
+
+
+      // Update the data
+      updateMap();
     }
 
     /******************* MAP HELPER FUNCTIONS ************************/
@@ -552,29 +532,62 @@
          });
     }
 
-
     function handleMouseOut(d,i) {
       d3.select(this).style("fill", colorByQuartile(d.properties.dictionary.length) + "");
       mapSVG.selectAll("text").remove();
 
     }
-
-    // Returns true if the given eventYear Date object is within the current year filter
-    // otherwise returns false.
-    function inYearFilter(eventYear) {
-      if (eventYear === null) return false;
-
-      return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
-        eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
-    }
-
-    function inTopicFilter(topicTitle) {
-      return GLOBAL_TOPIC_FILTER === null || GLOBAL_TOPIC_FILTER == topicTitle;
-    }
-
     
+    // Updates the map to reflect the current global filters
+    function updateMap() {
+      // need to update the colorByQuartile method
+      
+      var filterDict
+      var newData = GLOBAL_JSON_DATA.features.filter(function(d) {
+        if(d.properties.dictionary) {
+            filteredDict = d.properties.dictionary.values.filter( 
+              function(element) {
+                //console.log(element);
+                //var eventYear =  element.evyy);
+                //var year = parseFloat(element["evyy"]);
+                /*if(parent != "N\A") {
+                  return element.BinnedClaim1 == parent && eventYear.getFullYear() > GLOBAL_TIME_FILTER[0].getFullYear() && eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+                } else {
+                  return year > timeStart && year < timeEnd;                
+                }*/
+                //console.log(inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1));
+                return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
+              }
+            );
+            d.properties.dictionary = filteredDict;
+            return d; 
+        }
+      }); 
+      
+      var updatedData = mapSVG.selectAll("path")
+        .data(newData.features);
+      
+      updatedData.enter()
+        .append("path")
+        .attr("d", path)
+        .merge(updatedData)
+        .style("fill", function(d) {
+          //Get data value
+          if(d.properties.dictionary) {
+            var value = d.properties.dictionary.length;
+            if (value || value == 0) {
+              //If value exists…
+              return colorByQuartile(value);
+            } else {
+              
+              //If value is undefined…
+              return "#ccc";
+            }
+          }
+        });
 
-    
+      updatedData.exit().remove();
+    }
   </script>
 </body>
 </html>
