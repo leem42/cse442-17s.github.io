@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+
+  /******************** MAP STYLING ************************/
+  polyline {
+    opacity: .3;
+    stroke: black;
+    stroke-width: 2px;
+    fill: none;
+  }
+
+  polyline {
+    opacity: .3;
+    stroke: black;
+    stroke-width: 2px;
+    fill: none;
+  }
+
+  .labelValue {
+    font-size: 50%;
+    opacity: .5;
+  }
+
+  .arc wedge:hover {
+    cursor: pointer;
+  }
+
+  .arc text {
+    font: 10px sans-serif;
+    text-anchor: middle;
+  }
+
+  .arc wedge {
+    stroke-width: 1.5;
+    stroke: #fff;
+  }
+  /* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
+  .toolTip {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    position: absolute;
+    display: none;
+    width: auto;
+    height: auto;
+    background: none repeat scroll 0 0 white;
+    border: 0 none;
+    border-radius: 8px 8px 8px 8px;
+    box-shadow: -3px 3px 15px #888888;
+    color: black;
+    font: 12px sans-serif;
+    padding: 5px;
+    text-align: center;
+  }
+
+  .states :hover {
+    fill: white;
+  }
+
+  .states {
+    fill: #ccc;
+    stroke: #fff;
+  }
+
+  .symbol {
+    fill-opacity: .8;
+    stroke: #fff;
+  }
+
+  /**************************** SLIDER STYLING **************************/
+  .axis--grid .domain {
+    fill: #ddd;
+    stroke: none;
+  }
+
+  .axis--x .domain,
+  .axis--grid .tick line {
+    stroke: #fff;
+  }
+
+  .axis--grid .tick--minor line {
+    stroke-opacity: .5;
+  }
+
+
+  /* Give handles a fill color. Necessary for them to also be able to glow
+  like the selection region.*/
+  .handle {
+    fill: rgba(173, 173, 173, 0.75);
+  }
+
+  /* Make clickable/draggable elements (the selection and handles), glow */
+  .selection.move-enabled:hover, .handle:hover {
+    filter: url(#glow-filter);
+  }
+</style>
+
+
+<head>
+  <meta charset="utf-8">
+  <title>Pie</title>
+  <script type = "text/javascript" src = "abbreviated_map.json"> </script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+</head>
+
+<body>
+  <script>
+
+    /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
+    /************************* INITIALIZE COMMON VARIABLES *****************/
+    // The data from the CSV
+    var GLOBAL_CSV_ONLY_DATA = null;
+    var GLOBAL_JSON_DATA = null;
+
+    // Will hold the current year selection
+    var GLOBAL_TIME_FILTER = null;
+
+    // Will hold the current topic selection
+    var GLOBAL_TOPIC_FILTER = null;
+
+    // Will parse dates as a year value.
+    var parseDate = d3.timeParse("%Y");
+
+    /******************* INITIALIZE SLIDER VARIABLES *******************/
+
+     // Dimensions for the SVG image.
+    var sliderMargin = {top: 200, right: 40, bottom: 200, left: 40},
+        sliderWidth = 960 - sliderMargin.left - sliderMargin.right,
+        sliderHeight = 500 - sliderMargin.top - sliderMargin.bottom;
+    //Create SVG element
+
+    // Create a scale for the timeline
+    var sliderX = d3.scaleTime()
+        .rangeRound([0, sliderWidth]);
+
+    // Create the svg element
+    var sliderSVG = d3.select("body").append("svg")
+        .attr('id', 'slider-svg')
+        .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
+        .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
+
+    /*********************** INITIALIZE MAP VARIABLES *******************/
+    var us_state_abbrev = {
+      'Alabama': 'AL',
+      'Alaska': 'AK',
+      'Arizona': 'AZ',
+      'Arkansas': 'AR',
+      'California': 'CA',
+      'Colorado': 'CO',
+      'Connecticut': 'CT',
+      'Delaware': 'DE',
+      'Florida': 'FL',
+      'Georgia': 'GA',
+      'Hawaii': 'HI',
+      'Idaho': 'ID',
+      'Illinois': 'IL',
+      'Indiana': 'IN',
+      'Iowa': 'IA',
+      'Kansas': 'KS',
+      'Kentucky': 'KY',
+      'Louisiana': 'LA',
+      'Maine': 'ME',
+      'Maryland': 'MD',
+      'Massachusetts': 'MA',
+      'Michigan': 'MI',
+      'Minnesota': 'MN',
+      'Mississippi': 'MS',
+      'Missouri': 'MO',
+      'Montana': 'MT',
+      'Nebraska': 'NE',
+      'Nevada': 'NV',
+      'New Hampshire': 'NH',
+      'New Jersey': 'NJ',
+      'New Mexico': 'NM',
+      'New York': 'NY',
+      'North Carolina': 'NC',
+      'North Dakota': 'ND',
+      'Ohio': 'OH',
+      'Oklahoma': 'OK',
+      'Oregon': 'OR',
+      'Pennsylvania': 'PA',
+      'Rhode Island': 'RI',
+      'South Carolina': 'SC',
+      'South Dakota': 'SD',
+      'Tennessee': 'TN',
+      'Texas': 'TX',
+      'Utah': 'UT',
+      'Vermont': 'VT',
+      'Virginia': 'VA',
+      'Washington': 'WA',
+      'West Virginia': 'WV',
+      'Wisconsin': 'WI',
+      'Wyoming': 'WY'
+    };
+      
+    var colorByQuartile = d3.scaleQuantize()
+      .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+    colorByQuartile.domain([ 0, 1000]);
+
+    var mapWidth = 1024, 
+      mapHeight = 500;
+   
+    var mapSVG = d3.select("body").append("svg")
+      .attr('id', 'map-svg')
+      .attr("width", mapWidth)
+      .attr("height", mapHeight);
+
+
+    /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
+
+    
+   
+    /********************** LOAD THE CSV *************************/
+    d3.csv("ConciseProtestDataCSV.csv", function(error, data) {
+      if (error) throw error;
+
+      // Format the data to change the years to dates.
+      data.forEach(function(d, i) {
+          d.evyy = parseDate(d.evyy);
+          d.rptyy = parseDate(d.rptyy);
+          d.year = d.evyy === null ? d.rptyy : d.evyy;
+
+          if (d.year === null) {
+            console.log('NULL DATE');
+            console.log('index', i);
+            console.log('eventid', d.eventid);
+            console.log('evyy', d.evyy);
+            console.log('rptyy', d.rptyy);
+            console.log('year', d.year);
+          }
+          // do I need to include the rest here?
+      });
+
+      GLOBAL_CSV_ONLY_DATA = data;
+
+      /**************** CREATE THE SLIDER ***********************/
+
+      // Set the domain to the year data for the slider.
+      // This will set the width and tick marks to go off of the data range.
+      // We will be showing all the data by default, so set the first filter
+      // to be the full year domain in the data.
+      sliderX.domain(d3.extent(data, function(d) { return d.evyy; }));
+      GLOBAL_TIME_FILTER = sliderX.domain();
+
+      // Make the tall white tick marks
+      sliderSVG.append("g")
+          .attr("class", "axis axis--grid")
+          .attr("transform", "translate(0," + sliderHeight + ")")
+          .call(d3.axisBottom(sliderX)
+              .ticks(d3.timeYear)
+              .tickSize(-sliderHeight)
+              .tickFormat(function() { return null; }))
+        .selectAll(".tick")
+          .classed("tick--minor", function(d) { return d.getFullYear() % 5; });
+
+      // Draw the year labels
+      sliderSVG.append("g")
+          .attr("class", "axis axis--x")
+          .attr("transform", "translate(0," + sliderHeight + ")")
+          .call(d3.axisBottom(sliderX)
+              .ticks(d3.timeYear.every(5))
+              .tickPadding(0))
+          .attr("text-anchor", null)
+        .selectAll("text")
+          .attr("x", 6);
+
+
+      // Create the glow filter for the selection
+      var defs = sliderSVG.append("defs");
+
+      var glow_filter = defs.append("filter")
+        .attr("id", "glow-filter")
+        //.attr("height", "130%");
+        .attr("height", "300%")
+        .attr("width", "300%")
+        .attr("x", "-75%")
+        .attr("y", "-75%");
+
+      glow_filter.append("feMorphology")
+        .attr("operator", "dilate")
+        .attr("radius", "4")
+        .attr("in", "SourceAlpha")
+        .attr("result", "thicken");
+
+      glow_filter.append("feGaussianBlur")
+        .attr("in", "thicken")
+        .attr("stdDeviation", "10")
+        .attr("result", "blurred");
+
+      glow_filter.append("feFlood")
+        //.attr("flood-color", "rgb(249, 245, 194)")    // softer yellow
+        .attr("flood-color", "rgb(249, 249, 139)")      // brighter yellow
+        .attr("result", "glowColor");
+
+      glow_filter.append("feComposite")
+        .attr("in", "glowColor")
+        .attr("in2", "blurred")
+        .attr("operator", "in")
+        .attr("result", "softGlow_colored");
+
+
+      // overlay original SourceGraphic over glow by using
+      // feMerge filter. Order of specifying inputs is important!
+      var glow_feMerge = glow_filter.append("feMerge");
+
+      glow_feMerge.append("feMergeNode")
+          .attr("in", "softGlow_colored")
+      glow_feMerge.append("feMergeNode")
+          .attr("in", "SourceGraphic");
+
+
+      // Define a brush object along the x axis.
+      var brush = d3.brushX()
+            .extent([[0, 0], [sliderWidth, sliderHeight]])
+            .on("end", brushended);
+
+      // Draw the brush, and have the full range brushed at first to
+      // show the full span of years in the dataset. Also set the cursor
+      // to default for the selection since you can't move it.
+      var time_brush = sliderSVG.append("g")
+        .attr("class", "brush")
+        .call(brush)
+        .call(brush.move, sliderX.range());
+        d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor);
+  
+
+
+
+      /****************** LOAD AND DECORATE GEOJSON DATA ***************/
+      // BinnedClaimCountTwo --> {state: (year, binnedClaim, FullClaim etc)}
+      // (another asynch call)
+      d3.json("us-states.json", function(error, json) {
+
+        /**************** CREATE THE MAP *************************/
+      
+        // Start of Map Code
+        var projection = d3.geoAlbersUsa()
+         .translate([mapWidth/2, mapHeight/2])
+         .scale([1000]);
+        
+        // Define path generator
+        var path = d3.geoPath().projection(projection);
+        
+        // Define quantize scale to sort data values into buckets of color
+        // colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
+        
+        // go through data and group by value for each state if that value was in the clicked claim list
+        var BinnedClaimTwo = d3.nest()
+          .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
+          .rollup(function(v) { 
+            return {
+              "name": "StateAbbreviation",
+              "count": v.length,
+              "values": v
+            }; })
+          .entries(data);
+        
+        // Merge the ag. data and GeoJSON
+        // Loop through once for each ag. data value
+        for (var i = 0; i < BinnedClaimTwo.length; i++) {
+          // Grab cumalative number of protests for the state 
+          
+          var dataValue = BinnedClaimTwo[i].value;
+          var state = BinnedClaimTwo[i].key;
+          // Find the corresponding state inside the GeoJSON
+          for (var j = 0; j < json.features.length; j++) {
+
+            var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
+
+            if (state == jsonState) {
+              json.features[j].properties.name = jsonState;
+              json.features[j].properties.dictionary = dataValue;
+              
+              // Stop looking through the JSON
+              break;
+            }
+          }   
+        }
+        
+        // Draw the original map data
+        var originalData = mapSVG.selectAll("path")
+          .data(json.features);
+        console.log("ORIGIN");
+        // Style enter set
+        originalData.enter()
+          .append("path")
+          .attr("d", path)
+          .style("fill", function(d) {
+            //Get data value
+            var value = d.properties.dictionary;
+            if (value || value == 0) {
+              //If value exists…
+              return colorByQuartile(value);
+            } else {
+              
+              //If value is undefined…
+              return "#ccc";
+          }})
+        .on("mouseover",handleMouseOver)
+        .on("mouseout", handleMouseOut);
+        console.log(">>>>>> END OF ORIGIN");
+
+        GLOBAL_JSON_DATA = json;
+
+        // Test Map Update Step
+        updateMap(); 
+
+        // Updates the map to reflect the current global filters
+        function updateMap() {
+          console.log('mapSVG', mapSVG);
+          // need to update the colorByQuartile method
+          
+          var newData = json.features.filter(function(d) {
+            if(d.properties.dictionary) {
+                var filteredDict = d.properties.dictionary.values.filter( 
+                  function(element) {
+                    //console.log(element);
+                    //var eventYear =  element.evyy);
+                    //var year = parseFloat(element["evyy"]);
+                    /*if(parent != "N\A") {
+                      return element.BinnedClaim1 == parent && eventYear.getFullYear() > GLOBAL_TIME_FILTER[0].getFullYear() && eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+                    } else {
+                      return year > timeStart && year < timeEnd;                
+                    }*/
+                    return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
+                  }
+                );
+                d.properties.dictionary = filteredDict;
+                return d; 
+             }
+          }); 
+          
+          var map_internal_svg = d3.selectAll('#map-svg');
+          console.log('map internal', map_internal_svg);
+          var updatedData = mapSVG.selectAll("path")
+            .data(newData.features);
+          
+          updatedData.enter()
+            .append("path")
+            .attr("d", path)
+            .merge(updatedData)
+            .style("fill", function(d) {
+              //Get data value
+              if(d.properties.dictionary) {
+                var value = d.properties.dictionary.length;
+                if (value || value == 0) {
+                  //If value exists…
+                  return colorByQuartile(value);
+                } else {
+                  
+                  //If value is undefined…
+                  return "#ccc";
+                }
+              }
+            });
+
+          updatedData.exit().remove();
+        }
+        
+      });
+    });
+
+
+
+
+    /*@@@@@@@@@@@@@@@@@@@@@@@ HELPER FUNCTIONS @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
+    /************************** SLIDER HELPER FUNCTIONS *********************/
+
+    // Determine which cursor to display on the brush selection, default or move.
+    function getBrushSelectionCursor() {
+      // If the entire span is brushed, set the cursor to default
+      if (fullSpanIsBrushed()) {
+        return "default";
+      // Otherwise set it to move.
+      } else {
+        return "move";
+      }
+    }
+
+    // Returns whether the full year span is brushed.
+    function fullSpanIsBrushed() {
+      return GLOBAL_TIME_FILTER[0].getFullYear() == sliderX.domain()[0].getFullYear() &&
+          GLOBAL_TIME_FILTER[1].getFullYear() == sliderX.domain()[1].getFullYear();
+    }
+
+    // Returns whether only part of the year span is brushed.
+    function partialSpanIsBrushed() {
+      return !fullSpanIsBrushed();
+    }
+
+
+    // Update brush span upon drag or reselect.
+    function brushended() {
+      if (!d3.event.sourceEvent) return; // Only transition after input.
+
+      // Empty selections should just rebrush the entire year span,
+      // and reset the filter to the entire domain.
+      var newFilter = sliderX.domain();
+      var spanToBrush = sliderX.range();
+
+      // If we did have a selection, reset the span to brush to this smaller selection.
+      if (d3.event.selection) {
+        var d0 = d3.event.selection.map(sliderX.invert),
+            d1 = d0.map(d3.timeYear.round);
+
+        // If empty when rounded, use floor & ceil instead.
+        if (d1[0] >= d1[1]) {
+          d1[0] = d3.timeYear.floor(d0[0]);
+          d1[1] = d3.timeYear.offset(d1[0]);
+        }
+
+        // Set the new time filter to this new selection,
+        // and update the span to brush.
+        newFilter = d1;
+        spanToBrush = d1.map(sliderX);
+      }
+
+      // Brush the axis to the selection
+      // Update the global time filter
+      // Update the class of the brush to remove the move cursor and glow if
+      //  the entire span is brushed.
+      d3.select(this).transition().call(d3.event.target.move, spanToBrush);
+      GLOBAL_TIME_FILTER = newFilter;
+      d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor)
+          .classed("move-enabled", partialSpanIsBrushed);
+    }
+
+    /******************* MAP HELPER FUNCTIONS ************************/
+    // If mouse hovers over a state then highlight it
+    function handleMouseOver(d, i) {  // Add interactivity
+      d3.select(this)
+        .style("fill","rgb(0,0,255)");
+      
+      // Specify where to put label of text
+      mapSVG.append("text")
+        .attr("transform", function(d) { return "translate(225, 275)"; })
+        .text(function() {
+          var out = d.properties.name;
+          return out;  
+        });
+
+      mapSVG.append("text")
+        .attr("transform", function(d) { return "translate(225, 300)"; })
+         .text(function() {
+            var out = "Total Protests:" + d.properties.dictionary.length;
+           return out;  // Value of the text
+         });
+    }
+
+
+    function handleMouseOut(d,i) {
+      d3.select(this).style("fill", colorByQuartile(d.properties.dictionary.length) + "");
+      mapSVG.selectAll("text").remove();
+
+    }
+
+    // Returns true if the given eventYear Date object is within the current year filter
+    // otherwise returns false.
+    function inYearFilter(eventYear) {
+      if (eventYear === null) return false;
+
+      return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
+        eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
+    }
+
+    function inTopicFilter(topicTitle) {
+      return GLOBAL_TOPIC_FILTER === null || GLOBAL_TOPIC_FILTER == topicTitle;
+    }
+
+    
+
+    
+  </script>
+</body>
+</html>
+
