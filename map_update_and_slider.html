@@ -4,38 +4,6 @@
 <style>
 
   /******************** MAP STYLING ************************/
-  polyline {
-    opacity: .3;
-    stroke: black;
-    stroke-width: 2px;
-    fill: none;
-  }
-
-  polyline {
-    opacity: .3;
-    stroke: black;
-    stroke-width: 2px;
-    fill: none;
-  }
-
-  .labelValue {
-    font-size: 50%;
-    opacity: .5;
-  }
-
-  .arc wedge:hover {
-    cursor: pointer;
-  }
-
-  .arc text {
-    font: 10px sans-serif;
-    text-anchor: middle;
-  }
-
-  .arc wedge {
-    stroke-width: 1.5;
-    stroke: #fff;
-  }
   /* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
   .toolTip {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -53,17 +21,7 @@
     text-align: center;
   }
 
-  .states :hover {
-    fill: white;
-  }
-
-  .states {
-    fill: #ccc;
-    stroke: #fff;
-  }
-
-  .symbol {
-    fill-opacity: .8;
+  path {
     stroke: #fff;
   }
 
@@ -206,8 +164,7 @@
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
     colorByQuartile.domain([ 0, 1000]);
 
-    var mapWidth = 1024, 
-      mapHeight = 500;
+    var mapWidth = 1024, mapHeight = 500;
    
     var mapSVG = d3.select("body").append("svg")
       .attr('id', 'map-svg')
@@ -547,7 +504,7 @@
       d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor)
           .classed("move-enabled", partialSpanIsBrushed);
 
-	  updateMap();
+	    updateMap();
       // Update the data
     }
 
