@@ -260,6 +260,40 @@
 
       GLOBAL_CSV_ONLY_DATA = data;
 
+      /**************** CREATE THE TOPIC MENU *******************/
+      // generate all the binned claims in csv data
+      var topics = d3.nest()
+      .key(function (d) { return d.BinnedClaim1; })
+      .rollup( function (v) {return v.length })
+      .entries(GLOBAL_CSV_ONLY_DATA)
+
+      // drop down menu with  
+      topicMenu = d3.select('body')
+      .append('div')
+      .append('select')
+      .on('change', function(d) { 
+        if (this.value == '-- select an option --') {
+          GLOBAL_TOPIC_FILTER = null;
+        } else {
+          GLOBAL_TOPIC_FILTER = this.value;
+        }
+        updateMap();
+      })
+
+      // bind data to menu
+      topicMenu.selectAll('option')
+      .data(topics)
+      .enter()
+      .append('option')
+      .attr('value',function (d) { return d.key })
+      .text(function (d) { return (d.key + " " + d.value)})
+
+      // default selection.
+      topicMenu
+      .append('option')
+      .property("selected", true)
+      .text('-- select an option --')
+
       /**************** CREATE THE SLIDER ***********************/
 
       // Set the domain to the year data for the slider.
@@ -574,7 +608,6 @@
         updatedData.enter()
         .append("path")
         .attr("d", path)
-        .merge(updatedData)
         .style("fill", function(d) {
           //Get data value
           var value = d.properties.dictionary.values.length;
