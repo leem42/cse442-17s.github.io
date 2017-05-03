@@ -197,7 +197,7 @@ polyline {
 		
 		var updatedData = svg.selectAll("path")
 		.data(json.features);
-		
+		console.log("ORIGIN");
 		// Style enter set
 		updatedData.enter()
 		.append("path")
@@ -206,7 +206,6 @@ polyline {
 			//Get data value
 			var value = d.properties.dictionary;
 			if (value || value == 0) {
-				console.log(d.properties.name);
 				//If value exists…
 				return colorByQuartile(value);
 			} else {
@@ -216,7 +215,8 @@ polyline {
 		}})
 		.on("mouseover",handleMouseOver)
 		.on("mouseout", handleMouseOut);
-			
+		console.log(">>>>>> END OF ORIGIN");
+
 		
 	
 	// If mouse hovers over a state then highlight it
@@ -234,26 +234,44 @@ polyline {
 		svg.append("text")
 		.attr("transform", function(d) { return "translate(225, 300)"; })
 		 .text(function() {
-				var out = "Total Protests:" + d.properties.value;
+				var out = "Total Protests:" + d.properties.dictionary.length;
 		   return out;  // Value of the text
 		 });
 	}
 
 
 	function handleMouseOut(d,i) {
-		d3.select(this).style("fill", colorByQuartile(d.properties.value) + "");
+		d3.select(this).style("fill", colorByQuartile(d.properties.dictionary.length) + "");
 		svg.selectAll("text").remove();
 
 	}
 	
 	// Test Map Update Step
-	updateMap("N/A",1960,1971);
+	updateMap("N\A",1960, 2000);
 	
 	//Load in agriculture data
 	function updateMap(parent, timeStart, timeEnd) {
 		// need to update the colorByQuartile method
-		
 		// if parent is 
+		
+		var newData = json.features.filter(function(d) {
+			if(d.properties.dictionary) {
+				  var filteredDict = d.properties.dictionary.values.filter( 
+						function(element) {
+							var year2 =  parseFloat(element.evyy);
+							var year = parseFloat(element["evyy"]);
+							if(parent != "N\A") {
+								return element.BinnedClaim1 == parent && year > timeStart && year < timeEnd;
+							} else {
+								return year > timeStart && year < timeEnd;								
+							}
+						}
+					);
+				d.properties.dictionary = filteredDict;
+			    return d; 
+			 }
+		}) 
+		
 		var updatedData = svg.selectAll("path")
 		.data(json.features);
 		// Style enter set
@@ -261,26 +279,18 @@ polyline {
 		.append("path")
 		.attr("d", path)
 		.merge(updatedData)
-		.filter(function(d) {
-			console.log(d);
-			return d;
-			/* if(parent == "N/A") {
-				return d.properites.time < timeEnd && d.properties.time > timeStart;
-			} else {
-				return d.properites.time < timeEnd && d.properties.time&& d.properties.binnedClaim == parent;	
-			} */
-		})
 		.style("fill", function(d) {
 			//Get data value
-			var value = d.properties.dictionary;
-			if (value || value == 0) {
-				console.log(d.properties.name);
-				//If value exists…
-				return "#ccc"; // colorByQuartile(value);
-			} else {
-				
-				//If value is undefined…
-				return "#ccc";
+			if(d.properties.dictionary) {
+				var value = d.properties.dictionary.length;
+				if (value || value == 0) {
+					//If value exists…
+					return colorByQuartile(value);
+				} else {
+					
+					//If value is undefined…
+					return "#ccc";
+				}
 			}
 		})
 		updatedData.exit().remove();
