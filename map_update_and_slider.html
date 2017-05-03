@@ -21,10 +21,6 @@
     text-align: center;
   }
 
-  path {
-    stroke: #fff;
-  }
-
   /**************************** SLIDER STYLING **************************/
   .axis--grid .domain {
     fill: #ddd;
@@ -387,34 +383,11 @@
             }
           }   
         }
-        
-        // Draw the original map data
-        var originalData = mapSVG.selectAll("path")
-          .data(json.features);
-        console.log("ORIGIN");
-        // Style enter set
-        originalData.enter()
-          .append("path")
-          .attr("d", path)
-          .style("fill", function(d) {
-            //Get data value
-            var value = d.properties.dictionary;
-            if (value || value == 0) {
-              //If value exists…
-              return colorByQuartile(value.values.length);
-            } else {
-              
-              //If value is undefined…
-              return "#ccc";
-          }})
-        .on("mouseover",handleMouseOver)
-        .on("mouseout", handleMouseOut);
 
         GLOBAL_JSON_DATA = json;
         COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
 
-        // Test Map Update Step
-//       updateMap(); 
+        updateMap(); 
       });
     });
 
@@ -558,6 +531,8 @@
       GLOBAL_JSON_DATA = JSON.parse(JSON.stringify(COPY_GLOBAL_DATA));
       
       mapSVG.selectAll("path").remove();
+      // mapSVG.selectAll("text").remove();
+
 
       var updatedData = mapSVG.selectAll("path")
         .data(newData);
@@ -565,6 +540,7 @@
         updatedData.enter()
         .append("path")
         .attr("d", path)
+        .style("stroke", "white")
         .style("fill", function(d) {
           //Get data value
           var value = d.properties.dictionary.values.length;
@@ -577,7 +553,20 @@
           }
         })
       .on("mouseover",handleMouseOver)
-      .on("mouseout", handleMouseOut);
+      .on("mouseout", handleMouseOut)
+
+      // // append text to 
+      // mapSVG.selectAll("text")
+      // .data(newData)
+      // .enter()
+      // .append("svg:text")
+      // .text(function(d){ return d.properties.name; })
+      // .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+      // .attr("text-anchor","middle")
+      // .attr('font-size','5pt')
+      // .attr('fill', 'white')
+      // console.log("text");
+
       updatedData.exit().remove();
     };
 
