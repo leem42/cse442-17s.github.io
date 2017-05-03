@@ -73,9 +73,6 @@
 
     // Will hold the current topic selection
     var GLOBAL_TOPIC_FILTER = null;
-
-    // Will hold copy of the global data so filtering does not remove values
-    var COPY_GLOBAL_DATA;
     
     // Will parse dates as a year value.
     var parseDate = d3.timeParse("%Y");
@@ -354,12 +351,7 @@
         // go through data and group by value for each state if that value was in the clicked claim list
         var BinnedClaimTwo = d3.nest()
           .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
-          .rollup(function(v) { 
-            return {
-              "name": "StateAbbreviation",
-              "count": v.length,
-              "values": v
-            }; })
+          .rollup(function(v) { return v; })
           .entries(data);
         
         // Merge the ag. data and GeoJSON
@@ -385,8 +377,7 @@
         }
 
         GLOBAL_JSON_DATA = json;
-        COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
-
+        console.log(GLOBAL_JSON_DATA);
         updateMap(); 
       });
     });
@@ -498,7 +489,7 @@
       mapSVG.append("text")
         .attr("transform", function(d) { return "translate(225, 300)"; })
          .text(function() {
-        	 var length = d.properties.dictionary.values.length;
+        	 var length = d.properties.dictionary.length;
              var out = "Total Protests:" + length;
              return out;  // Value of the text
          });
@@ -506,7 +497,7 @@
 
     function handleMouseOut(d,i) {
     	var length;
-	   	length = d.properties.dictionary.values.length;
+	   	length = d.properties.dictionary.length;
 	    d3.select(this).style("fill", colorByQuartile(length) + "");
 	    mapSVG.selectAll("text").remove();
     	
@@ -516,19 +507,21 @@
     function updateMap() {
       // need to update the colorByQuartile method
       console.log("UpdateMap Called");
+
+      var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
       
-      var newData = GLOBAL_JSON_DATA.features.filter(function(d) {
+      var newData = COPY_GLOBAL_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
-        	 var filteredDict = d.properties.dictionary.values.filter( 
+        	 var filteredDict = d.properties.dictionary.filter( 
               function(element) {
                 return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
               }
             );
-        	 d.properties.dictionary.values = filteredDict;
+        	 d.properties.dictionary = filteredDict;
             return d; 
         }
       }); 
-      GLOBAL_JSON_DATA = JSON.parse(JSON.stringify(COPY_GLOBAL_DATA));
+     
       
       mapSVG.selectAll("path").remove();
       // mapSVG.selectAll("text").remove();
@@ -543,7 +536,7 @@
         .style("stroke", "white")
         .style("fill", function(d) {
           //Get data value
-          var value = d.properties.dictionary.values.length;
+          var value = d.properties.dictionary.length;
           if (value || value == 0) {
               //If value exists…
               return colorByQuartile(value);
