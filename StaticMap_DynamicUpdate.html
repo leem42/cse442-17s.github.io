@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+polyline {
+	opacity: .3;
+	stroke: black;
+	stroke-width: 2px;
+	fill: none;
+}
+
+polyline {
+	opacity: .3;
+	stroke: black;
+	stroke-width: 2px;
+	fill: none;
+}
+
+.labelValue {
+	font-size: 50%;
+	opacity: .5;
+}
+
+.arc wedge:hover {
+	cursor: pointer;
+}
+
+.arc text {
+	font: 10px sans-serif;
+	text-anchor: middle;
+}
+
+.arc wedge {
+	stroke-width: 1.5;
+	stroke: #fff;
+}
+/* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
+.toolTip {
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	position: absolute;
+	display: none;
+	width: auto;
+	height: auto;
+	background: none repeat scroll 0 0 white;
+	border: 0 none;
+	border-radius: 8px 8px 8px 8px;
+	box-shadow: -3px 3px 15px #888888;
+	color: black;
+	font: 12px sans-serif;
+	padding: 5px;
+	text-align: center;
+}
+
+.states :hover {
+	fill: white;
+}
+
+.states {
+	fill: #ccc;
+	stroke: #fff;
+}
+
+.symbol {
+	fill-opacity: .8;
+	stroke: #fff;
+}
+</style>
+
+<head>
+<meta charset="utf-8">
+<title>Pie</title>
+<script type = "text/javascript" src = "abbreviated_map.json"> </script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+</head>
+
+<body>
+	<script>
+    	var us_state_abbrev = {
+		    'Alabama': 'AL',
+		    'Alaska': 'AK',
+		    'Arizona': 'AZ',
+		    'Arkansas': 'AR',
+		    'California': 'CA',
+		    'Colorado': 'CO',
+		    'Connecticut': 'CT',
+		    'Delaware': 'DE',
+		    'Florida': 'FL',
+		    'Georgia': 'GA',
+		    'Hawaii': 'HI',
+		    'Idaho': 'ID',
+		    'Illinois': 'IL',
+		    'Indiana': 'IN',
+		    'Iowa': 'IA',
+		    'Kansas': 'KS',
+		    'Kentucky': 'KY',
+		    'Louisiana': 'LA',
+		    'Maine': 'ME',
+		    'Maryland': 'MD',
+		    'Massachusetts': 'MA',
+		    'Michigan': 'MI',
+		    'Minnesota': 'MN',
+		    'Mississippi': 'MS',
+		    'Missouri': 'MO',
+		    'Montana': 'MT',
+		    'Nebraska': 'NE',
+		    'Nevada': 'NV',
+		    'New Hampshire': 'NH',
+		    'New Jersey': 'NJ',
+		    'New Mexico': 'NM',
+		    'New York': 'NY',
+		    'North Carolina': 'NC',
+		    'North Dakota': 'ND',
+		    'Ohio': 'OH',
+		    'Oklahoma': 'OK',
+		    'Oregon': 'OR',
+		    'Pennsylvania': 'PA',
+		    'Rhode Island': 'RI',
+		    'South Carolina': 'SC',
+		    'South Dakota': 'SD',
+		    'Tennessee': 'TN',
+		    'Texas': 'TX',
+		    'Utah': 'UT',
+		    'Vermont': 'VT',
+		    'Virginia': 'VA',
+		    'Washington': 'WA',
+		    'West Virginia': 'WV',
+		    'Wisconsin': 'WI',
+		    'Wyoming': 'WY',
+	};
+    	
+   	var colorByQuartile = d3.scaleQuantize()
+	.range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+	colorByQuartile.domain([ 0, 1000]);
+
+  	var width = 1024, 
+  		height = 500;
+  //Create SVG element
+	var svg = d3.select("body")
+	.append("svg")
+	.attr("width", width)
+	.attr("height", height);
+
+  
+  
+  var stateProtest = {};
+  d3.csv("ConciseProtestDataCSV.csv", function(data) {
+	 
+    //Load in GeoJSON data
+    // BinnedClaimCountTwo --> {state: (year, binnedClaim, FullClaim etc)}
+	d3.json("us-states.json", function(error, json) {
+		
+	    // Start of Map Code
+	    var projection = d3.geoAlbersUsa()
+		   .translate([width/2, height/2])
+		   .scale([1000]);
+		
+		//Define path generator
+		var path = d3.geoPath().projection(projection);
+		
+		//Define quantize scale to sort data values into buckets of color
+		//colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
+		var stateProtest = {};
+		
+		// go through data and group by value for each state if that value was in the clicked claim list
+		var BinnedClaimTwo = d3.nest()
+	    .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
+	    .rollup(function(v) { 
+	      return {
+	        "name": "StateAbbreviation",
+	        "count": v.length,
+	        "values": v
+	      }; })
+	    .entries(data);
+		
+		//Merge the ag. data and GeoJSON
+		//Loop through once for each ag. data value
+		for (var i = 0; i < BinnedClaimTwo.length; i++) {
+			//Grab cumalative number of protests for the state 
+			
+			var dataValue = BinnedClaimTwo[i].value;
+			var state = BinnedClaimTwo[i].key;
+			//Find the corresponding state inside the GeoJSON
+			for (var j = 0; j < json.features.length; j++) {
+
+				var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
+
+				if (state == jsonState) {
+					json.features[j].properties.name = jsonState;
+					json.features[j].properties.dictionary = dataValue;
+					
+					//Stop looking through the JSON
+					break;
+					}
+				}		
+		}
+		
+		var updatedData = svg.selectAll("path")
+		.data(json.features);
+		console.log("ORIGIN");
+		// Style enter set
+		updatedData.enter()
+		.append("path")
+		.attr("d", path)
+		.style("fill", function(d) {
+			//Get data value
+			var value = d.properties.dictionary;
+			if (value || value == 0) {
+				//If value exists…
+				return colorByQuartile(value);
+			} else {
+				
+				//If value is undefined…
+				return "#ccc";
+		}})
+		.on("mouseover",handleMouseOver)
+		.on("mouseout", handleMouseOut);
+		console.log(">>>>>> END OF ORIGIN");
+
+		
+	
+	// If mouse hovers over a state then highlight it
+	function handleMouseOver(d, i) {  // Add interactivity
+		d3.select(this)
+		.style("fill","rgb(0,0,255)");
+	
+		// Specify where to put label of text
+		svg.append("text")
+		.attr("transform", function(d) { return "translate(225, 275)"; })
+		.text(function() {
+			var out = d.properties.name;
+			return out;  
+		});
+		svg.append("text")
+		.attr("transform", function(d) { return "translate(225, 300)"; })
+		 .text(function() {
+				var out = "Total Protests:" + d.properties.dictionary.length;
+		   return out;  // Value of the text
+		 });
+	}
+
+
+	function handleMouseOut(d,i) {
+		d3.select(this).style("fill", colorByQuartile(d.properties.dictionary.length) + "");
+		svg.selectAll("text").remove();
+
+	}
+	
+	// Test Map Update Step
+	updateMap("N\A",1960, 2000);
+	
+	//Load in agriculture data
+	function updateMap(parent, timeStart, timeEnd) {
+		// need to update the colorByQuartile method
+		// if parent is 
+		
+		var newData = json.features.filter(function(d) {
+			if(d.properties.dictionary) {
+				  var filteredDict = d.properties.dictionary.values.filter( 
+						function(element) {
+							var year2 =  parseFloat(element.evyy);
+							var year = parseFloat(element["evyy"]);
+							if(parent != "N\A") {
+								return element.BinnedClaim1 == parent && year > timeStart && year < timeEnd;
+							} else {
+								return year > timeStart && year < timeEnd;								
+							}
+						}
+					);
+				d.properties.dictionary = filteredDict;
+			    return d; 
+			 }
+		}) 
+		
+		var updatedData = svg.selectAll("path")
+		.data(json.features);
+		// Style enter set
+		updatedData.enter()
+		.append("path")
+		.attr("d", path)
+		.merge(updatedData)
+		.style("fill", function(d) {
+			//Get data value
+			if(d.properties.dictionary) {
+				var value = d.properties.dictionary.length;
+				if (value || value == 0) {
+					//If value exists…
+					return colorByQuartile(value);
+				} else {
+					
+					//If value is undefined…
+					return "#ccc";
+				}
+			}
+		})
+		updatedData.exit().remove();
+	}
+		
+	})
+  });
+
+  </script>
+</body>
+</html>
+
