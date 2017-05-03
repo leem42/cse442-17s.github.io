@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+
+
 <style>
 
 .axis--grid .domain {
@@ -17,21 +19,34 @@
 }
 
 
-.selection:hover {
-  /*stroke: black;
-  stroke-opacity: 0.5;
-  stroke-width: 5;
-  filter: drop-shadow(16px 16px 20px blue);*/
+/* Give handles a fill color. Necessary for them to also be able to glow
+like the selection region.*/
+.handle {
+  fill: rgb(173, 173, 173);
+}
+
+/* Make clickable/draggable elements (the selection and handles), glow */
+.selection:hover, .handle:hover {
   filter: url(#glow-filter);
 }
 
 </style>
 <body>
+
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
+// The data from the CSV
+var GLOBAL_DATA = null;
+
 // Will hold the current selection
 var GLOBAL_TIME_FILTER = null;
+
+// An arbitrary filter that is out of range of the dataset,
+// to indicate a selection of none of the data
+var NO_YEAR_SELECTED_FILTER = null;
+
 
 // Will parse dates as a year value.
 var parseDate = d3.timeParse("%Y");
@@ -62,19 +77,31 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
       d.val = +d.val;
   });
 
-  // Set the width and tick marks to go off of the data range.
+  // Keep a copy of the data
+  GLOBAL_DATA = data;
+
+  // Create the arbitrary no year selected filter.
+  var max = d3.max(d3.values(GLOBAL_DATA).map(function(d) { return d.year}));
+  var overMax = new Date(max.getFullYear() + 10, 1, 1);
+  NO_YEAR_SELECTED_FILTER = [overMax, overMax];  // Date outside data range, Jan. 1 2009
+
+  // Set the domain to the year data for the slider.
+  // This will set the width and tick marks to go off of the data range.
+  // We will be showing all the data by default, so set the first filter
+  // to be the full year domain in the data.
   x.domain(d3.extent(data, function(d) { return d.year; }));
+  GLOBAL_TIME_FILTER = x.domain();
 
   // Make the tall white tick marks
   svg.append("g")
       .attr("class", "axis axis--grid")
       .attr("transform", "translate(0," + height + ")")
       .call(d3.axisBottom(x)
-          .ticks(d3.timeYear.every(5))
+          .ticks(d3.timeYear)
           .tickSize(-height)
-          .tickFormat(function() { return null; }));
-    //.selectAll(".tick")
-    //  .classed("tick--minor", function(d) { return d.getYears(); });
+          .tickFormat(function() { return null; }))
+    .selectAll(".tick")
+      .classed("tick--minor", function(d) { return d.getFullYear() % 5; });
 
   // Draw the year labels
   svg.append("g")
@@ -89,7 +116,7 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
 
  
 
-  // Create the glow filter.
+  // Create the glow filter for the selection
   var defs = svg.append("defs");
 
   var glow_filter = defs.append("filter")
@@ -116,8 +143,8 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
     .attr("result", "blurred");
 
   glow_filter.append("feFlood")
-    //.attr("flood-color", "rgb(249, 245, 194)")
-    .attr("flood-color", "rgb(249, 249, 139)")
+    //.attr("flood-color", "rgb(249, 245, 194)")    // softer yellow
+    .attr("flood-color", "rgb(249, 249, 139)")      // brighter yellow
     .attr("result", "glowColor");
 
   glow_filter.append("feComposite")
@@ -126,7 +153,8 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
     .attr("operator", "in")
     .attr("result", "softGlow_colored");
 
-  // overlay original SourceGraphic over translated blurred opacity by using
+
+  // overlay original SourceGraphic over glow by using
   // feMerge filter. Order of specifying inputs is important!
   var glow_feMerge = glow_filter.append("feMerge");
 
@@ -135,45 +163,60 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
   glow_feMerge.append("feMergeNode")
       .attr("in", "SourceGraphic");
 
-
-   // Draw the brush.
-  svg.append("g")
-    .attr("class", "brush")
-    //.style("filter", "url(#glow)")
-    .call(d3.brushX()
+  // Define a brush object along the x axis.
+  var brush = d3.brushX()
         .extent([[0, 0], [width, height]])
-        .on("end", brushended));
+        .on("end", brushended);
 
+  // Draw the brush, and have the full range brushed at first to
+  // show the full span of years in the dataset.
+  var time_brush = svg.append("g")
+    .attr("class", "brush")
+    //.classed("move-enabled", false)   // Full extent selected, so cannot move.
+    .call(brush)
+    .call(brush.move, x.range());
 });
 
 
-
-
-
-
-
-
+// Update brush span upon drag or reselect.
 function brushended() {
   if (!d3.event.sourceEvent) return; // Only transition after input.
-  if (!d3.event.selection) return; // Ignore empty selections.
-  console.log('prev time filter: ', GLOBAL_TIME_FILTER);
-  var d0 = d3.event.selection.map(x.invert),
-      d1 = d0.map(d3.timeYear.round);
 
-  // If empty when rounded, use floor & ceil instead.
-  if (d1[0] >= d1[1]) {
-    d1[0] = d3.timeYear.floor(d0[0]);
-    d1[1] = d3.timeYear.offset(d1[0]);
+  // Empty selections should just rebrush the entire year span,
+  // and reset the filter to the entire domain.
+  var newFilter = x.domain();
+  var spanToBrush = x.range();
+
+  // If we did have a selection, reset the span to brush to this smaller selection.
+  if (d3.event.selection) {
+    var d0 = d3.event.selection.map(x.invert),
+        d1 = d0.map(d3.timeYear.round);
+
+    // If empty when rounded, use floor & ceil instead.
+    if (d1[0] >= d1[1]) {
+      d1[0] = d3.timeYear.floor(d0[0]);
+      d1[1] = d3.timeYear.offset(d1[0]);
+    }
+
+    // Set the new time filter to this new selection,
+    // and update the span to brush.
+    newFilter = d1;
+    spanToBrush = d1.map(x);
   }
 
-  console.log('d0: ', d0);
-  console.log('d1: ', d1);
-  GLOBAL_TIME_FILTER = d1;
-
-
-
-  d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+  // Brush the axis to the selection
+  // Update the global time filter
+  // Update the class of the brush to remove the move cursor if
+  //  the entire span is brushed.
+  d3.select(this).transition().call(d3.event.target.move, spanToBrush);
+  console.log('prev time filter: ', GLOBAL_TIME_FILTER);
+  GLOBAL_TIME_FILTER = newFilter;
+  console.log('new time filter: ', GLOBAL_TIME_FILTER);
+  /*d3.select(this).classed("move-enabled", function(d) {
+    console.log(GLOBAL_TIME_FILTER != x.domain());
+    return GLOBAL_TIME_FILTER != x.domain()
+  });*/
 }
 
-
 </script>
+</body>
