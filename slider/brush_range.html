@@ -22,11 +22,11 @@
 /* Give handles a fill color. Necessary for them to also be able to glow
 like the selection region.*/
 .handle {
-  fill: rgb(173, 173, 173);
+  fill: rgba(173, 173, 173, 0.75);
 }
 
 /* Make clickable/draggable elements (the selection and handles), glow */
-.selection:hover, .handle:hover {
+.selection.move-enabled:hover, .handle:hover {
   filter: url(#glow-filter);
 }
 
@@ -42,10 +42,6 @@ var GLOBAL_DATA = null;
 
 // Will hold the current selection
 var GLOBAL_TIME_FILTER = null;
-
-// An arbitrary filter that is out of range of the dataset,
-// to indicate a selection of none of the data
-var NO_YEAR_SELECTED_FILTER = null;
 
 
 // Will parse dates as a year value.
@@ -80,11 +76,6 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
   // Keep a copy of the data
   GLOBAL_DATA = data;
 
-  // Create the arbitrary no year selected filter.
-  var max = d3.max(d3.values(GLOBAL_DATA).map(function(d) { return d.year}));
-  var overMax = new Date(max.getFullYear() + 10, 1, 1);
-  NO_YEAR_SELECTED_FILTER = [overMax, overMax];  // Date outside data range, Jan. 1 2009
-
   // Set the domain to the year data for the slider.
   // This will set the width and tick marks to go off of the data range.
   // We will be showing all the data by default, so set the first filter
@@ -114,7 +105,6 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
     .selectAll("text")
       .attr("x", 6);
 
- 
 
   // Create the glow filter for the selection
   var defs = svg.append("defs");
@@ -126,10 +116,6 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
     .attr("width", "300%")
     .attr("x", "-75%")
     .attr("y", "-75%");
-
-    /*<filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%">
-    <!-- Thicken out the original shape -->
-    <feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />*/
 
   glow_filter.append("feMorphology")
     .attr("operator", "dilate")
@@ -163,19 +149,44 @@ d3.csv("./dummy_year_data.csv", function(error, data) {
   glow_feMerge.append("feMergeNode")
       .attr("in", "SourceGraphic");
 
+
   // Define a brush object along the x axis.
   var brush = d3.brushX()
         .extent([[0, 0], [width, height]])
         .on("end", brushended);
 
   // Draw the brush, and have the full range brushed at first to
-  // show the full span of years in the dataset.
+  // show the full span of years in the dataset. Also set the cursor
+  // to default for the selection since you can't move it.
   var time_brush = svg.append("g")
     .attr("class", "brush")
-    //.classed("move-enabled", false)   // Full extent selected, so cannot move.
     .call(brush)
     .call(brush.move, x.range());
+  d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor);
 });
+
+
+// Determine which cursor to display on the brush selection, default or move.
+function getBrushSelectionCursor() {
+  // If the entire span is brushed, set the cursor to default
+  if (fullSpanIsBrushed()) {
+    return "default";
+  // Otherwise set it to move.
+  } else {
+    return "move";
+  }
+}
+
+// Returns whether the full year span is brushed.
+function fullSpanIsBrushed() {
+  return GLOBAL_TIME_FILTER[0].getFullYear() == x.domain()[0].getFullYear() &&
+      GLOBAL_TIME_FILTER[1].getFullYear() == x.domain()[1].getFullYear();
+}
+
+// Returns whether only part of the year span is brushed.
+function partialSpanIsBrushed() {
+  return !fullSpanIsBrushed();
+}
 
 
 // Update brush span upon drag or reselect.
@@ -206,16 +217,12 @@ function brushended() {
 
   // Brush the axis to the selection
   // Update the global time filter
-  // Update the class of the brush to remove the move cursor if
+  // Update the class of the brush to remove the move cursor and glow if
   //  the entire span is brushed.
   d3.select(this).transition().call(d3.event.target.move, spanToBrush);
-  console.log('prev time filter: ', GLOBAL_TIME_FILTER);
   GLOBAL_TIME_FILTER = newFilter;
-  console.log('new time filter: ', GLOBAL_TIME_FILTER);
-  /*d3.select(this).classed("move-enabled", function(d) {
-    console.log(GLOBAL_TIME_FILTER != x.domain());
-    return GLOBAL_TIME_FILTER != x.domain()
-  });*/
+  d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor)
+      .classed("move-enabled", partialSpanIsBrushed);
 }
 
 </script>
