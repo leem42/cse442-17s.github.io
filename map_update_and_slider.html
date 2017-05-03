@@ -120,8 +120,13 @@
     // Will hold the current topic selection
     var GLOBAL_TOPIC_FILTER = null;
 
+    // Will hold copy of the global data so filtering does not remove values
+    var COPY_GLOBAL_DATA;
+    
     // Will parse dates as a year value.
     var parseDate = d3.timeParse("%Y");
+    
+ 
 
     /******************* INITIALIZE SLIDER VARIABLES *******************/
 
@@ -209,7 +214,14 @@
       .attr("width", mapWidth)
       .attr("height", mapHeight);
 
-
+    // Start of Map Code
+    var projection = d3.geoAlbersUsa()
+     .translate([mapWidth/2, mapHeight/2])
+     .scale([1000]);
+    
+    // Define path generator
+    var path = d3.geoPath().projection(projection);
+    
     /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
 
     
@@ -339,7 +351,7 @@
         d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor);
   
 
-
+ 
 
       /****************** LOAD AND DECORATE GEOJSON DATA ***************/
       // BinnedClaimCountTwo --> {state: (year, binnedClaim, FullClaim etc)}
@@ -348,14 +360,7 @@
 
         /**************** CREATE THE MAP *************************/
       
-        // Start of Map Code
-        var projection = d3.geoAlbersUsa()
-         .translate([mapWidth/2, mapHeight/2])
-         .scale([1000]);
-        
-        // Define path generator
-        var path = d3.geoPath().projection(projection);
-        
+       
         // Define quantize scale to sort data values into buckets of color
         // colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
         
@@ -383,6 +388,8 @@
             var jsonState = us_state_abbrev[json.features[j].properties.name]; // convert the name to an abbreviated version
 
             if (state == jsonState) {
+              console.log(state);
+              console.log(jsonState);
               json.features[j].properties.name = jsonState;
               json.features[j].properties.dictionary = dataValue;
               
@@ -405,7 +412,7 @@
             var value = d.properties.dictionary;
             if (value || value == 0) {
               //If value exists…
-              return colorByQuartile(value);
+              return colorByQuartile(value.values.length);
             } else {
               
               //If value is undefined…
@@ -413,15 +420,12 @@
           }})
         .on("mouseover",handleMouseOver)
         .on("mouseout", handleMouseOut);
-        console.log(">>>>>> END OF ORIGIN");
 
         GLOBAL_JSON_DATA = json;
+        COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
 
         // Test Map Update Step
-        updateMap(); 
-
-
-        
+//       updateMap(); 
       });
     });
 
@@ -436,6 +440,10 @@
     function inYearFilter(eventYear) {
       if (eventYear === null) return false;
 
+      console.log(eventYear);
+      if(typeof eventYear == 'date') {
+    	  
+      }
       return eventYear.getFullYear() >= GLOBAL_TIME_FILTER[0].getFullYear() && 
         eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
     }
@@ -505,9 +513,8 @@
       d3.selectAll(".selection").attr("cursor", getBrushSelectionCursor)
           .classed("move-enabled", partialSpanIsBrushed);
 
-
+	  updateMap();
       // Update the data
-      updateMap();
     }
 
     /******************* MAP HELPER FUNCTIONS ************************/
@@ -527,45 +534,44 @@
       mapSVG.append("text")
         .attr("transform", function(d) { return "translate(225, 300)"; })
          .text(function() {
-            var out = "Total Protests:" + d.properties.dictionary.length;
-           return out;  // Value of the text
+        	 var length = d.properties.dictionary.values.length;
+             var out = "Total Protests:" + length;
+             return out;  // Value of the text
          });
     }
 
     function handleMouseOut(d,i) {
-      d3.select(this).style("fill", colorByQuartile(d.properties.dictionary.length) + "");
-      mapSVG.selectAll("text").remove();
-
+    	var length;
+	   	length = d.properties.dictionary.values.length;
+	    d3.select(this).style("fill", colorByQuartile(length) + "");
+	    mapSVG.selectAll("text").remove();
+    	
     }
     
     // Updates the map to reflect the current global filters
     function updateMap() {
       // need to update the colorByQuartile method
+      console.log("UpdateMap Called");
+      console.log(GLOBAL_JSON_DATA);
       
-      var filterDict
+      
       var newData = GLOBAL_JSON_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
-            filteredDict = d.properties.dictionary.values.filter( 
+        	 var filteredDict;
+	       	filteredDict = d.properties.dictionary.values;
+	       	 
+            filteredDict = filteredDict.filter( 
               function(element) {
-                //console.log(element);
-                //var eventYear =  element.evyy);
-                //var year = parseFloat(element["evyy"]);
-                /*if(parent != "N\A") {
-                  return element.BinnedClaim1 == parent && eventYear.getFullYear() > GLOBAL_TIME_FILTER[0].getFullYear() && eventYear.getFullYear() < GLOBAL_TIME_FILTER[1].getFullYear();
-                } else {
-                  return year > timeStart && year < timeEnd;                
-                }*/
-                //console.log(inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1));
                 return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
               }
             );
-            d.properties.dictionary = filteredDict;
+            d.properties.dictionary.values = filteredDict;
             return d; 
         }
       }); 
-      
+      GLOBAL_JSON_DATA = COPY_GLOBAL_DATA;
       var updatedData = mapSVG.selectAll("path")
-        .data(newData.features);
+        .data(newData);
       
       updatedData.enter()
         .append("path")
@@ -573,21 +579,21 @@
         .merge(updatedData)
         .style("fill", function(d) {
           //Get data value
-          if(d.properties.dictionary) {
-            var value = d.properties.dictionary.length;
-            if (value || value == 0) {
+          var value = 0;
+  		  value = d.properties.dictionary.values.length;
+           
+          if (value || value == 0) {
               //If value exists…
               return colorByQuartile(value);
-            } else {
-              
+          } else {
               //If value is undefined…
               return "#ccc";
-            }
           }
-        });
-
+        })
       updatedData.exit().remove();
-    }
+    };
+
+    
   </script>
 </body>
 </html>
