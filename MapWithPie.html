@@ -352,52 +352,56 @@ polyline {
         .attr("transform", "translate(" + (initial_x + shift) + ",0)")
         initial_x += shift;
         
-        svg.select(".labelName")
+        svgPie.select(".labelName")
         .transition()
-        .delay(function(d,i) { return i * 10; })
         .duration(500)
         .style('opacity', 0.3);
 
-        svg.selectAll("polyline")
+        svgPie.selectAll("polyline")
         .transition()
-        .delay(function(d,i) { return i * 10; })
         .duration(500)
         .style('opacity', 0.02);
 
-        svg.selectAll("." + level)
+        svgPie.selectAll("." + level)
         .transition()
-        .delay(function(d,i) { return i * 10; })
         .duration(250)
         .style('opacity', 0.3);
         
         
       } else {
-        // TODO: remove filter, add data back in.
+        
+
+
         if (lower_level == 'FullClaim' && !d3.selectAll(".val1").empty()) {
-          d3.selectAll(".val1").remove();
+          d3.selectAll(".val1").transition()
+          .style('opacity', 0)
+          .remove();
           initial_x -= shift;
         }
 	   
         if (lower_level == 'FullClaim') {
         	console.log("Hello");
-            svg.select(".labelName")
+            svgPie.select(".labelName")
             .transition()
-            .delay(function(d,i) { return i * 10; })
             .duration(500)
             .style('opacity', 1);
 
-             svg.selectAll("polyline")
+             svgPie.selectAll("polyline")
             .transition()
-            .delay(function(d,i) { return i * 10; })
             .duration(500)
             .style('opacity', 0.3);
             }
-            svg.selectAll("." + level)
+            svgPie.selectAll("." + level)
             .transition()
-            .delay(function(d,i) { return i * 10; })
             .duration(250)
             .style('opacity', 1);
-          d3.selectAll("." + lower_level).remove();
+
+          	d3.selectAll("." + lower_level)
+          	.transition()
+            .duration(250)
+            .style('opacity', 0)
+          	.remove();
+
           initial_x -= shift;
         }
       d3.event.stopPropagation();});
@@ -423,13 +427,17 @@ polyline {
 	
 	//Load in agriculture data
 	function modifyMap(data, subtractUndefined) {
-		
+		console.log(data);
+		var level = data[0].value.name; // fullclaim / val1
+
+
 		var list = []
 		for (value in data){
 			list.push(data[value].key);
 		}
-		
+
 		// go through data and group by value for each state if that value was in the clicked claim list
+
 		var BinnedClaimCountTwo = d3.nest()
 	    .key(function(d) { return d.StateAbbreviation; }) // {claim1 : subdivClaim1: Yes No }
 	    .rollup(function(v) { 
@@ -462,6 +470,7 @@ polyline {
 	        .entries(v)
 	      }; })
 	    .entries(GLOBAL_DATA);
+
 		
  		var stateProtestTwo = {};
  		var maxValue = -1000000;
