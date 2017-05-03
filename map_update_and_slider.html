@@ -3,6 +3,21 @@
 
 <style>
 
+  .svg-container {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+    padding-bottom: 50%; /* aspect ratio */
+    vertical-align: top;
+    overflow: hidden;
+  }
+  .svg-content-responsive {
+      display: inline-block;
+      position: absolute;
+      top: 10px;
+      left: 0;
+  }
+
   /******************** MAP STYLING ************************/
   /* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
   .toolTip {
@@ -130,16 +145,24 @@
       'Wyoming': 'WY'
     };
       
-    var colorByQuartile = d3.scaleQuantize()
+    var colorByQuartile = d3.scaleQuantile()
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
     colorByQuartile.domain([ 0, 1000]);
 
     var mapWidth = 1024, mapHeight = 500;
    
-    var mapSVG = d3.select("body").append("svg")
+    var mapSVG = d3.select("body")
+      .append("div")
+      .classed("svg-container", true) //container class to make it responsive
+      .append("svg")
+      //responsive SVG needs these 2 attributes and no width and height attr
+      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
+      //class to make it responsive
+      .classed("svg-content-responsive", true)
       .attr('id', 'map-svg')
-      .attr("width", mapWidth)
-      .attr("height", mapHeight);
+      // .attr("width", mapWidth)
+      // .attr("height", mapHeight);
 
     // Start of Map Code
     var projection = d3.geoAlbersUsa()
@@ -163,10 +186,19 @@
         .rangeRound([0, sliderWidth]);
 
     // Create the svg element
-    var sliderSVG = d3.select("body").append("svg")
+    var sliderSVG = d3.select("body")
+        .append("div")
+        .classed("svg-container", true) //container class to make it responsive
+        .append("svg")
+        //responsive SVG needs these 2 attributes and no width and height attr
+        .attr("preserveAspectRatio", "xMinYMin meet")
+        .attr("viewBox", "0 0 1440 750")
+        //class to make it responsive
+        .classed("svg-content-responsive", true)
         .attr('id', 'slider-svg')
-        .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
-        .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
+        
+        // .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
+        // .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
       .append("g")
         .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
 
@@ -378,7 +410,7 @@
 
         GLOBAL_JSON_DATA = json;
         console.log(GLOBAL_JSON_DATA);
-        updateMap(); 
+        constructMap(); 
       });
     });
 
@@ -476,7 +508,7 @@
     // If mouse hovers over a state then highlight it
     function handleMouseOver(d, i) {  // Add interactivity
       d3.select(this)
-        .style("fill","rgb(0,0,255)");
+        .style("fill","rgb(0,125,255)");
       
       // Specify where to put label of text
       mapSVG.append("text")
@@ -509,31 +541,40 @@
       console.log("UpdateMap Called");
 
       var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
-      
+      // 52 states
       var newData = COPY_GLOBAL_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
+          // dictionary: array of claims.
         	 var filteredDict = d.properties.dictionary.filter( 
               function(element) {
                 return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
               }
             );
-        	 d.properties.dictionary = filteredDict;
+        	  d.properties.dictionary = filteredDict;
             return d; 
         }
       }); 
-     
-      
-      mapSVG.selectAll("path").remove();
-      // mapSVG.selectAll("text").remove();
 
-
-      var updatedData = mapSVG.selectAll("path")
+      var updatedData = mapSVG.selectAll("path") // update
         .data(newData);
-      
-        updatedData.enter()
+
+        updatedData
+        .exit()
+        .transition()
+        .duration(1000)
+        .remove();
+
+        updatedData
+        .enter()
         .append("path")
         .attr("d", path)
+        .merge(updatedData)
+        .on("mouseover",handleMouseOver)
+        .on("mouseout", handleMouseOut)
+        
         .style("stroke", "white")
+        .transition()
+        .duration(1000)
         .style("fill", function(d) {
           //Get data value
           var value = d.properties.dictionary.length;
@@ -545,8 +586,8 @@
               return "#ccc";
           }
         })
-      .on("mouseover",handleMouseOver)
-      .on("mouseout", handleMouseOut)
+        
+        // .style("opacity", "1")
 
       // // append text to 
       // mapSVG.selectAll("text")
@@ -560,8 +601,55 @@
       // .attr('fill', 'white')
       // console.log("text");
 
-      updatedData.exit().remove();
+      // updatedData.exit().remove();
     };
+
+    function constructMap() {
+
+       var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
+      // 52 states
+      var newData = COPY_GLOBAL_DATA.features.filter(function(d) {
+        if(d.properties.dictionary) {
+          // dictionary: array of claims.
+           var filteredDict = d.properties.dictionary.filter( 
+              function(element) {
+                return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
+              }
+            );
+            d.properties.dictionary = filteredDict;
+            return d; 
+        }
+      }); 
+        var updatedData = mapSVG.selectAll("path") // update
+        .data(newData);
+
+        updatedData
+        .exit()
+        .transition()
+        .duration(1000)
+        .remove();
+
+        updatedData
+        .enter()
+        .append("path")
+        .attr("d", path)
+        // .merge(updatedData)
+        .on("mouseover",handleMouseOver)
+        .on("mouseout", handleMouseOut)
+        
+        .style("stroke", "white")
+        .style("fill", function(d) {
+          //Get data value
+          var value = d.properties.dictionary.length;
+          if (value || value == 0) {
+              //If value exists…
+              return colorByQuartile(value);
+          } else {
+              //If value is undefined…
+              return "#ccc";
+          }
+        })
+    }
 
     
   </script>
