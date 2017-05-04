@@ -1,7 +1,3 @@
-
-
-    /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
-
     /************************* INITIALIZE COMMON VARIABLES *****************/
     // The data from the CSV
     var GLOBAL_CSV_ONLY_DATA = null;
@@ -68,6 +64,8 @@
       'Wisconsin': 'WI',
       'Wyoming': 'WY'
     };
+
+    /*********************** INITIALIZE MAP VARIABLES *******************/
       
     var GLOBAL_COLOR_SCALE = d3.scaleQuantile()
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
@@ -75,18 +73,12 @@
 
     var mapWidth = 1024, mapHeight = 500;
 
-    var mapSVG = d3.select("#wrapper")
-      // .classed("svg-container", true) //container class to make it responsive
-      // .style("padding-bottom", "35%")
-      .append("svg")
-      //responsive SVG needs these 2 attributes and no width and height attr
-      // .attr("preserveAspectRatio", "xMinYMin meet")
-      // .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
-      // // //class to make it responsive
-      // .classed("svg-content-responsive", true)
-      .attr('id', 'map-svg')
-      .attr("width", mapWidth)
-      .attr("height", mapHeight);
+
+    /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
+
+
+   
 
     // Start of Map Code
     var projection = d3.geoAlbersUsa()
@@ -109,8 +101,33 @@
     var sliderX = d3.scaleTime()
         .rangeRound([0, sliderWidth]);
 
-    // Create the svg element
-    var sliderSVG = d3.select("#wrapper")
+  
+        var mapSVG;
+        var sliderSVG;
+
+    
+    /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
+
+ d3.csv("SuccinctCSV.csv", function(error, data) {
+ /********************** LOAD THE CSV *************************/
+
+  if (error) throw error;   
+
+   mapSVG = d3.select("#wrapper")
+      .classed("svg-container", true) //container class to make it responsive
+      .style("padding-bottom", "35%")
+      .append("svg")
+      //responsive SVG needs these 2 attributes and no width and height attr
+      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
+      //class to make it responsive
+      .classed("svg-content-responsive", true)
+      .attr('id', 'map-svg')
+      .attr("width", mapWidth)
+      .attr("height", mapHeight);
+
+     // Create the svg element
+    sliderSVG = d3.select("#wrapper")
         .append("div")
         .classed("svg-container", true) //container class to make it responsive
         .style("padding-bottom", "10%")
@@ -126,16 +143,7 @@
         // .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
       .append("g")
         .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
-
-    /*********************** INITIALIZE MAP VARIABLES *******************/
-    
-    /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
-
-    
-   
-    /********************** LOAD THE CSV *************************/
-    d3.csv("SuccinctCSV.csv", function(error, data) {
-      if (error) throw error;
+ 
 
       // Format the data to change the years to dates.
       data.forEach(function(d, i) {
