@@ -552,17 +552,17 @@
 
       // append text to 
       mapSVG.selectAll("text")
-      .data(newData)
+      .data(GLOBAL_CSV_ONLY_DATA)
       .enter()
       .append("svg:text")
       .text(function(d){ return d.properties.name; })
       .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
-      .style("text-anchor","middle")
-      .style('font-size','7pt')
-      .style("font-weight", "bold")
-      .style("font-family", "calibri")
-      .style('fill', 'white')
-      console.log("text");
+      .attr("text-anchor","middle")
+      .attr('font-size','7pt')
+      .attr("font-weight", "bold")
+      .attr("font-family", "calibri")
+      .attr('fill', 'white')
+
     };
 
     function constructMap() {
@@ -611,18 +611,20 @@
         }
       })
 
+      console.log(GLOBAL_CSV_ONLY_DATA)
+
        // append text to 
       mapSVG.selectAll("text")
-      .data(newData)
+      .data(GLOBAL_CSV_ONLY_DATA)
       .enter()
       .append("svg:text")
       .text(function(d){ return d.properties.name; })
       .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
-      .style("text-anchor","middle")
-      .style('font-size','7pt')
-      .style("font-weight", "bold")
-      .style("font-family", "calibri")
-      .style('fill', 'white')
+      .attr("text-anchor","middle")
+      .attr('font-size','7pt')
+      .attr("font-weight", "bold")
+      .attr("font-family", "calibri")
+      .attr('fill', 'white')
 
     }
 
