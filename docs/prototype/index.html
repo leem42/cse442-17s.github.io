@@ -24,15 +24,81 @@
 
   <section>
     <h2>Design Rationale</h2>
-    <p>
+    <!--<p>
       [Add: A rationale for your design decisions. How did you choose your particular visual encodings and interaction techniques? What alternatives did you consider and how did you arrive at your ultimate choices?]
+    </p>-->
+    <p>
+      We went through a lot of discussion of alternative research questions and data visualizations prior to settling on our final
+      decision for the prototype. First, we had to decide what our main focus would be for a limited and focused prototype,
+      given the 4-5 datasets we identified in our proposal. We decided to focus on just the protest data, which already had several salient
+      aspects to display in a graphic: the spread and number of protests over time, over geography (by state), over various topics, and for or against these topics. 
+    </p>
+    <p>
+      We explored the data and considered many different alternative visualizations before both deciding on a design as well as on our
+      central research question. Many of our ideas centered around using a map, but we also
+      considered charts like the stream chart used in the NameVoyager example, or a Gantt chart to show change for
+      multiple categories over time. We also considered a Sankey diagram to causality, but that we decided may be more useful later when comparing the protest data with congressional data and other governmental data. We also considered pie and bar charts to show the spread of focus on various topics. Each of these options prioritized a different aspect of the data, so we needed to determine which
+      aspects of the protest data were most useful to visualize, and how to combine these aspects if at all.
+    </p>
+    <p>
+      Ultimately, we decided showing the spread of protests over U.S. states was the most interesting aspect of the data and should be
+      the center of our visualization. However we also felt that secondary areas of interest remained the topic of the protest,
+      and the date of the protest. We wanted to facilitate comparison in trends nationally across these areas. 
+    </p>
+    <p>
+      This informed our shift toward a map as a central visualization. Although in some ways the stream chart would have showed changes in topics of protests over time better, it lost the geography aspect. The Gantt chart would lose this as well, and would be very complex
+      and hard to read. In terms of maps, we had first considered a bubble chart with interaction to reveal donuts charts around it showing the distribution of topics in protests of each state. We also had considered expanding these bubbles into a large pie chart that would expand to fill the screen while the background was darkened slightly upon click, to improve visibility. However, both these obscured a key aspect of our data, trends in topic across the nation, behind a hover interaction for every state. We felt this should be brought to the fore instead.
+    </p>
+    <p>
+      In order to better form judgements regarding trends nationally, we switched to a filterable chloropleth map. We wanted to be able to encode the number of protests, so we put that on the color visual encoding channel in the map. This allowed for a conventional visual encoding choice, that limited the number of colors to a set of binned colors increasing in value to match the size. We felt this would be more readable than encoding majority protest topic by color, as this would have far too many colors to keep track of in the map.
+      To add more depth to our map displaying numbers of protest by state, we moved the concept of time and topic to filters, allowing
+      the user to select the data he/she is most interested in and visualize an updated map based on that. However even once we got to that stage we went through further iterations.
+    </p>
+    <p>
+      Our original plan involved using a slider with a brush to select time spans over years, and a cascading pie chart visualization that would drive both the filtering by topic (and sub-topic and pro/against these subtopics) as well as add another layer of visualization to better show relative interest nationally in various topics in public protest over a given span of years. We had chosen a pie chart as either that or a stack bar provided good proportional judgements as we discussed in lecture and the reading, but we felt the pie chart was more visually appealling.  
+    </p>
+    <p>
+      However, after coding this solution up, we found the pie chart had too much data to encode with 30 or so different topics, and also was
+      not as intuitive to use as a filter. It's prominence on the page made it appear more as a visualization tool rather than a filtering tool. Therefore to simplify things we changed the topic filter to be a simple drop down. This drop down updates the content of the chloropleth map to match the filter, and show trends nationally for a given single broad topic. 
+    </p>
+    <p>
+      As a reach goal we defined another design to handle visualizing pro, against and unknown opinions of protesters pertaining to each of these different topics. This would involve changing the map into 3 small multiples upon filtering by topic, one for protests in support of that topic, one map for those against, and one map for those whose opinion was unknown. We also considered having a small horizontal bar chart to show the difference between number of protests in each category (pro, agaisnt, unknown), to most easily allow the user to determine which opinion was most prevalent in protests at a given time. We felt this was very obscured in the chloropleth map, which did not provide a clear side by side and perceptual perception of difference in total number of protests nationally with each opinion.
+    </p>
+    <p>
+      In the end, we feel our visualization addresses our central aim regarding the protest data we found for the U.S. between 1960 and 1999. We decided ultimately to help reveal trends of divisive issues across the United States over time. For example, we wanted our exploratory data visualization to allow users to find if protests were mainly centered in highly populated states or if certain issues mobilized the public in more rural states. Users should be able to compare changes in protest trends geographically by year span and by broad topics. By making the filters clearly filter elements, and enlarging the map to have it take center stage, we direct the user's attention to trends geographically across the United States.
     </p>
   </section>
 
   <section>
     <h2>Development Process</h2>
-    <p>
+    <!--<p>
       [Add: An overview of your development process. Describe how the work was split among the team members. Include a commentary on the development process, including answers to the following questions: Roughly how much time did you spend developing your application (in people-hours)? What aspects took the most time?]
+    </p>-->
+    <p>
+      The roles we decided for our team were roughly:
+      <ul>
+        <li>Michael Lee: Data Lead</li>
+        <li>Jianyang Zhang: Tech Lead</li>
+        <li>Kelsie Haakenson: UX Lead and Coordinator</li>
+      </ul>
+    </p>
+    <p>
+      Much of our work began with discussing various ideas, and jumping into sketches of how we wanted the interaction to look like. Michael
+      worked hard on organizing our data, transforming it to include overall binned topics for protests from another document provided by
+      the Stanford group hosting this data, cleaning the data and extracting relevant information. Throughout development, as we discovered data issues with unexpected values, we deferred to Michael as to how to clean these up.
+    </p>
+    <p>
+      Kelsie led discussions about UX design, but all added their ideas and critiques. The design aspect took the most time ultimately, as it even continued into our technical implementation phase. After deciding on using a chloropleth map with filters and developing
+      the one with pie chart filters, we completely changed our design of the filters to simplify interactions.
+    </p>
+    <p>
+      Technical development was perhaps the hardest to start. We all had a learning curve with D3, and perhaps should have
+      taken more time early on to experiment with D3 instead of waiting until a design was created before beginning coding. Jane was in charge of ensuring all components of our code worked together, and often was the go-to person on D3 related questions.
+      We split up the code predominantly based on components at the beginning: Michael worked on the map, Kelsie on the time filter/slider, and Jane on the pie chart filter. Once the pie chart was removed, Jane added the select element. We all worked together off and on on integration and debugging.
+    </p>
+    <p>
+      Roughly, we as a group (adding together each of our hours) spent around 60 hours total on this application,
+      including design, data cleaning, and tech work.
     </p>
   </section>
 
