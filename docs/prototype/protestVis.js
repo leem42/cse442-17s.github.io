@@ -71,20 +71,20 @@
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
     GLOBAL_COLOR_SCALE.domain([ 0, 1000]);
 
-    var mapWidth = 1024, mapHeight = 500;
+    var mapWidth = 800, mapHeight = 500;
 
 
     /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
 
-
+    var div = d3.select("body").append("div").attr("class", "toolTip");
 
    
 
     // Start of Map Code
     var projection = d3.geoAlbersUsa()
-     .translate([mapWidth/2, mapHeight/2])
+     .translate([mapWidth/2 - 25, mapHeight/2])
      .scale([1000]);
-    alert("hello");
+
     // Define path generator
     var path = d3.geoPath().projection(projection);
 
@@ -92,9 +92,9 @@
     /******************* INITIALIZE SLIDER VARIABLES *******************/
 
      // Dimensions for the SVG image.
-    var sliderMargin = {top: 20, right: 40, bottom: 100, left: 170},
+    var sliderMargin = {top: 20, right: 40, bottom: 20, left: 170},
         sliderWidth = 590 - sliderMargin.left - sliderMargin.right,
-        sliderHeight = 150 - sliderMargin.top - sliderMargin.bottom;
+        sliderHeight = 70 - sliderMargin.top - sliderMargin.bottom;
     //Create SVG element
 
     // Create a scale for the timeline
@@ -102,26 +102,27 @@
         .rangeRound([0, sliderWidth]);
 
   
-        var mapSVG;
-        var sliderSVG;
+    var mapSVG;
+    var sliderSVG;
 
     
     /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
 
- d3.csv("SuccinctCSV.csv", function(error, data) {
- /********************** LOAD THE CSV *************************/
+   d3.csv("SuccinctCSV.csv", function(error, data) {
+   /********************** LOAD THE CSV *************************/
 
-  if (error) throw error;   
+    if (error) throw error;   
 
-   mapSVG = d3.select("#wrapper")
-      .classed("svg-container", true) //container class to make it responsive
-      .style("padding-bottom", "35%")
+    mapSVG = d3.select("#wrapper")
+      // .classed("svg-container", true) //container class to make it responsive
+      // .style("padding-bottom", "35%")
+      .append("div")
       .append("svg")
       //responsive SVG needs these 2 attributes and no width and height attr
-      .attr("preserveAspectRatio", "xMinYMin meet")
-      .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
+      // .attr("preserveAspectRatio", "xMinYMin meet")
+      // .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
       //class to make it responsive
-      .classed("svg-content-responsive", true)
+      // .classed("svg-content-responsive", true)
       .attr('id', 'map-svg')
       .attr("width", mapWidth)
       .attr("height", mapHeight);
@@ -129,18 +130,18 @@
      // Create the svg element
     sliderSVG = d3.select("#wrapper")
         .append("div")
-        .classed("svg-container", true) //container class to make it responsive
-        .style("padding-bottom", "10%")
+        // .classed("svg-container", true) //container class to make it responsive
+        // .style("padding-bottom", "10%")
         .append("svg")
         //responsive SVG needs these 2 attributes and no width and height attr
-        .attr("preserveAspectRatio", "xMinYMin meet")
-        .attr("viewBox", "0 0 " + sliderWidth * 3 + " " + sliderHeight * 3)
+        // .attr("preserveAspectRatio", "xMinYMin meet")
+        // .attr("viewBox", "0 0 " + sliderWidth * 3 + " " + sliderHeight * 3)
         //class to make it responsive
-        .classed("svg-content-responsive", true)
+        // .classed("svg-content-responsive", true)
         .attr('id', 'slider-svg')
         
-        // .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
-        // .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
+        .attr("width", sliderWidth + sliderMargin.left + sliderMargin.right)
+        .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
       .append("g")
         .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
  
@@ -214,6 +215,7 @@
       topicMenu
       .style("margin-left", "170px")
       .style("display", "block")
+      .style("width", "380px")
 
 
       /**************** CREATE THE SLIDER ***********************/
@@ -451,32 +453,39 @@
     function handleMouseOver(d, i) {  // Add interactivity
       d3.select(this)
         .style("fill","rgb(0,125,255)");
-      
-      // Specify where to put label of text
-      mapSVG.append("text")
-        .attr("class", "stateID")
-        .attr("transform", function(d) { return "translate(900, 275)"; })
-        .style("font-family", "calibri")
-        .text(function() {
-          return d.properties.fullName;
-        });
 
-      mapSVG.append("text")
-        .attr("class", "stateID")
-        .attr("transform", function(d) { return "translate(900, 300)"; })
-        .style("font-family", "calibri")
-        .text(function() {
-        	var length = d.properties.dictionary.length;
-            var out = "Total Protests:" + length;
-            return out;  // Value of the text
-        });
+      div.style("left", d3.event.pageX+10+"px");
+      div.style("top", d3.event.pageY-25+"px");
+      div.style("display", "inline-block");
+      div.style("font-weight", "bold")
+      div.style("font-family", "calibri")
+      div.html((d.properties.fullName) + "<br>" + "Total protest: " + (d.properties.dictionary.length ));
+      
+      // // Specify where to put label of text
+      // mapSVG.append("text")
+      //   .attr("class", "stateID")
+      //   .attr("transform", function(d) { return "translate(625, 275)"; })
+      //   .style("font-family", "calibri")
+      //   .text(function() {
+      //     return d.properties.fullName;
+      //   });
+
+      // mapSVG.append("text")
+      //   .attr("class", "stateID")
+      //   .attr("transform", function(d) { return "translate(625, 300)"; })
+      //   .style("font-family", "calibri")
+      //   .text(function() {
+      //   	var length = d.properties.dictionary.length;
+      //       var out = "Total Protests:" + length;
+      //       return out;  // Value of the text
+      //   });
     }
 
     function handleMouseOut(d,i) {
-    	var length;
-	   	length = d.properties.dictionary.length;
+      div.style("display", "none");
+    	var length = d.properties.dictionary.length;
 	    d3.select(this).style("fill", GLOBAL_COLOR_SCALE(Math.log(length + 1) + ""));
-	    mapSVG.selectAll(".stateID").remove();
+	    // mapSVG.selectAll(".stateID").remove();
     	
     }
     
@@ -542,16 +551,18 @@
         })
 
       // append text to 
-      // mapSVG.selectAll("text")
-      // .data(newData)
-      // .enter()
-      // .append("svg:text")
-      // .text(function(d){ return d.properties.name; })
-      // .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
-      // .attr("text-anchor","middle")
-      // .attr('font-size','6pt')
-      // .attr('fill', 'white')
-      // console.log("text");
+      mapSVG.selectAll("text")
+      .data(newData)
+      .enter()
+      .append("svg:text")
+      .text(function(d){ return d.properties.name; })
+      .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+      .style("text-anchor","middle")
+      .style('font-size','7pt')
+      .style("font-weight", "bold")
+      .style("font-family", "calibri")
+      .style('fill', 'white')
+      console.log("text");
     };
 
     function constructMap() {
@@ -599,6 +610,20 @@
             return "#ccc";
         }
       })
+
+       // append text to 
+      mapSVG.selectAll("text")
+      .data(newData)
+      .enter()
+      .append("svg:text")
+      .text(function(d){ return d.properties.name; })
+      .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+      .style("text-anchor","middle")
+      .style('font-size','7pt')
+      .style("font-weight", "bold")
+      .style("font-family", "calibri")
+      .style('fill', 'white')
+
     }
 
     // this function updates color scale and legend
@@ -623,14 +648,14 @@
       var mapSvg = d3.select("#wrapper").select("#map-svg")
       mapSvg.select(".legendHeader").remove();
       mapSvg.append("text")
-        .attr("transform", "translate(900,390)")
+        .attr("transform", "translate(640,390)")
         .attr("class", "legendHeader")
         .text("Number of Protests")
         .style("font-weight", "bold")
         .style("font-family", "calibri")
       mapSvg.append("g")
         .attr("class", "legendQuant")
-        .attr("transform", "translate(900,400)");
+        .attr("transform", "translate(640,400)");
 
       mapSvg.select(".legendQuant")
         .call(legend);
