@@ -68,8 +68,18 @@
       Our original plan involved using a slider with a brush to select time spans over years, and a cascading pie chart visualization that would drive both the filtering by topic (and sub-topic and pro/against these subtopics) as well as add another layer of visualization to better show relative interest nationally in various topics in public protest over a given span of years. We had chosen a pie chart as either that or a stack bar provided good proportional judgements as we discussed in lecture and the reading, but we felt the pie chart was more visually appealling.  
     </p>
     <p>
-      However, after coding this solution up, we found the pie chart had too much data to encode with 30 or so different topics, and also was
-      not as intuitive to use as a filter. It's prominence on the page made it appear more as a visualization tool rather than a filtering tool. Therefore to simplify things we changed the topic filter to be a simple drop down. This drop down updates the content of the chloropleth map to match the filter, and show trends nationally for a given single broad topic. 
+      However, after coding this solution up, we found the pie chart had too much data to encode with 30 or so different topics, and also was not as intuitive to use as a filter. It's prominence on the page made it appear more as a visualization tool rather than a filtering tool. Therefore to simplify things we changed the topic filter to be a simple drop down. This drop down updates the content of the chloropleth map to match the filter, and show trends nationally for a given single broad topic. 
+    </p>
+    <p>
+      As for specific decisions in our design:
+      <ul>
+        <li> 
+          We binned colors for our chloropleth map using a logarithmic scale that remains constant through filtering. We decided against quartiles because it binned much of the smaller numbers of protests together so that it obscured important variation in the data. We decided against linear binning and used logarithmic instead as linear also removed much of the detail give the spread of our data (more outliers than middle values), and logarithmic gave more granularity to the differences between states. We decided to use a fixed scale throughout filtering changes rather than re-binning based on the min/max values in each subset in order to facilitate comparison between years and topics, which was an essential aspect of our research goal.
+        </li>
+        <li> 
+          We added a glow animation to the slider to better emphasize what aspects the user may interact with. We felt this was fairly obscured in the basic slider when automatically brushed to the full extent. Move is not a possible option at that point, only the handles may be interacted with. Therefore we updated the cursor (as much as we could) and added appropriate glow animations to illustrate what was currently selectable in the slider.
+        </li>
+      </ul>
     </p>
     <p>
       As a reach goal we defined another design to handle visualizing pro, against and unknown opinions of protesters pertaining to each of these different topics. This would involve changing the map into 3 small multiples upon filtering by topic, one for protests in support of that topic, one map for those against, and one map for those whose opinion was unknown. We also considered having a small horizontal bar chart to show the difference between number of protests in each category (pro, agaisnt, unknown), to most easily allow the user to determine which opinion was most prevalent in protests at a given time. We felt this was very obscured in the chloropleth map, which did not provide a clear side by side and perceptual perception of difference in total number of protests nationally with each opinion.
