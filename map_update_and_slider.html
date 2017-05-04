@@ -3,6 +3,7 @@
 
 <style>
 
+  /******************** SVG responsive STYLING ************************/
   .svg-container {
     display: inline-block;
     position: relative;
@@ -18,23 +19,7 @@
       left: 0;
   }
 
-  /******************** MAP STYLING ************************/
-  /* Tooltip from http://bl.ocks.org/juan-cb/1984c7f2b446fffeedde*/
-  .toolTip {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    position: absolute;
-    display: none;
-    width: auto;
-    height: auto;
-    background: none repeat scroll 0 0 white;
-    border: 0 none;
-    border-radius: 8px 8px 8px 8px;
-    box-shadow: -3px 3px 15px #888888;
-    color: black;
-    font: 12px sans-serif;
-    padding: 5px;
-    text-align: center;
-  }
+  /**************************** MAP STYLING ******************************/
 
   /**************************** SLIDER STYLING **************************/
   .axis--grid .domain {
@@ -51,7 +36,6 @@
     stroke-opacity: .5;
   }
 
-
   /* Give handles a fill color. Necessary for them to also be able to glow
   like the selection region.*/
   .handle {
@@ -62,6 +46,14 @@
   .selection.move-enabled:hover, .handle:hover {
     filter: url(#glow-filter);
   }
+
+
+   /*****************  Used for creating the legend STYLING *****************/
+  text.legendHeader {
+  color: #111;
+  margin: 24px 0 -12px 20px;
+  }
+
 </style>
 
 
@@ -71,6 +63,7 @@
   <script type = "text/javascript" src = "abbreviated_map.json"> </script>
   <script src="https://d3js.org/d3.v4.min.js"></script>
   <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
 </head>
 
 <body>
@@ -145,9 +138,9 @@
       'Wyoming': 'WY'
     };
       
-    var colorByQuartile = d3.scaleQuantile()
+    var GLOBAL_COLOR_SCALE = d3.scaleQuantile()
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
-    colorByQuartile.domain([ 0, 1000]);
+    GLOBAL_COLOR_SCALE.domain([ 0, 1000]);
 
     var mapWidth = 1024, mapHeight = 500;
    
@@ -242,6 +235,7 @@
 
       GLOBAL_CSV_ONLY_DATA = data;
 
+
       /**************** CREATE THE TOPIC MENU *******************/
       // generate all the binned claims in csv data
       var topics = d3.nest()
@@ -275,6 +269,7 @@
       .append('option')
       .property("selected", true)
       .text('-- select an option --')
+
 
       /**************** CREATE THE SLIDER ***********************/
 
@@ -378,7 +373,7 @@
       
        
         // Define quantize scale to sort data values into buckets of color
-        // colorByQuartiles taken from colorByQuartilebrewer.js, included in the D3 download
+        // GLOBAL_COLOR_SCALEs taken from GLOBAL_COLOR_SCALEbrewer.js, included in the D3 download
         
         // go through data and group by value for each state if that value was in the clicked claim list
         var BinnedClaimTwo = d3.nest()
@@ -512,6 +507,7 @@
       
       // Specify where to put label of text
       mapSVG.append("text")
+        .attr("class", "stateID")
         .attr("transform", function(d) { return "translate(225, 275)"; })
         .text(function() {
           var out = d.properties.name;
@@ -519,6 +515,7 @@
         });
 
       mapSVG.append("text")
+        .attr("class", "stateID")
         .attr("transform", function(d) { return "translate(225, 300)"; })
          .text(function() {
         	 var length = d.properties.dictionary.length;
@@ -530,30 +527,38 @@
     function handleMouseOut(d,i) {
     	var length;
 	   	length = d.properties.dictionary.length;
-	    d3.select(this).style("fill", colorByQuartile(length) + "");
-	    mapSVG.selectAll("text").remove();
+	    d3.select(this).style("fill", GLOBAL_COLOR_SCALE(Math.log(length + 1) + ""));
+	    mapSVG.selectAll(".stateID").remove();
     	
     }
     
     // Updates the map to reflect the current global filters
     function updateMap() {
-      // need to update the colorByQuartile method
+
+      // need to update the GLOBAL_COLOR_SCALE method
       console.log("UpdateMap Called");
 
       var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
-      // 52 states
+
+      minValue = 1000;
+      maxValue = -1000;
+
       var newData = COPY_GLOBAL_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
-          // dictionary: array of claims.
-        	 var filteredDict = d.properties.dictionary.filter( 
-              function(element) {
-                return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
-              }
-            );
-        	  d.properties.dictionary = filteredDict;
-            return d; 
+        	var filteredDict = d.properties.dictionary.filter( 
+            function(element) {
+              return inYearFilter(element.evyy) && inTopicFilter(element.BinnedClaim1);
+            }
+          );
+      	  d.properties.dictionary = filteredDict;
+          maxValue = Math.max(maxValue,d.properties.dictionary.length);
+          minValue = Math.min(minValue,d.properties.dictionary.length);
+          return d; 
         }
       }); 
+
+
+      updateColorAndLegend(minValue,maxValue);
 
       var updatedData = mapSVG.selectAll("path") // update
         .data(newData);
@@ -577,10 +582,11 @@
         .duration(1000)
         .style("fill", function(d) {
           //Get data value
-          var value = d.properties.dictionary.length;
+          var value = Math.log(d.properties.dictionary.length + 1);
           if (value || value == 0) {
               //If value exists…
-              return colorByQuartile(value);
+
+              return GLOBAL_COLOR_SCALE(value);
           } else {
               //If value is undefined…
               return "#ccc";
@@ -605,8 +611,8 @@
     };
 
     function constructMap() {
-
-       var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
+      updateColorAndLegend(7,5228);
+      var COPY_GLOBAL_DATA = JSON.parse(JSON.stringify(GLOBAL_JSON_DATA));
       // 52 states
       var newData = COPY_GLOBAL_DATA.features.filter(function(d) {
         if(d.properties.dictionary) {
@@ -620,38 +626,68 @@
             return d; 
         }
       }); 
-        var updatedData = mapSVG.selectAll("path") // update
-        .data(newData);
+      var updatedData = mapSVG.selectAll("path") // update
+      .data(newData);
 
-        updatedData
-        .exit()
-        .transition()
-        .duration(1000)
-        .remove();
+      updatedData
+      .exit()
+      .transition()
+      .duration(500)
+      .remove();
 
-        updatedData
-        .enter()
-        .append("path")
-        .attr("d", path)
-        // .merge(updatedData)
-        .on("mouseover",handleMouseOver)
-        .on("mouseout", handleMouseOut)
-        
-        .style("stroke", "white")
-        .style("fill", function(d) {
-          //Get data value
-          var value = d.properties.dictionary.length;
-          if (value || value == 0) {
-              //If value exists…
-              return colorByQuartile(value);
-          } else {
-              //If value is undefined…
-              return "#ccc";
-          }
-        })
+      updatedData
+      .enter()
+      .append("path")
+      .attr("d", path)
+      // .merge(updatedData)
+      .on("mouseover",handleMouseOver)
+      .on("mouseout", handleMouseOut)
+      
+      .style("stroke", "white")
+      .style("fill", function(d) {
+        //Get data value
+        var value = Math.log(d.properties.dictionary.length + 1);
+        if (value || value == 0) {
+            //If value exists…
+            return GLOBAL_COLOR_SCALE(value);
+        } else {
+            //If value is undefined…
+            return "#ccc";
+        }
+      })
     }
 
-    
+    // this function updates color scale and legend
+    function updateColorAndLegend(minValue,maxValue) {
+      GLOBAL_COLOR_SCALE = d3.scaleQuantile()
+      .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+      GLOBAL_COLOR_SCALE.domain([ Math.log(minValue + 1), Math.log(maxValue + 1)]);
+
+      var transformedColorScale = d3.scaleQuantile()
+      .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
+      transformedColorScale.domain([ minValue, maxValue]);
+
+      var legend = d3.legendColor()
+      .labelFormat(d3.format(",.0f"))
+      .cells(10)
+      .scale(transformedColorScale);
+      // http://bl.ocks.org/syntagmatic/29bccce80df0f253c97e
+      var mapSvg = d3.select("body").select("#map-svg")
+      mapSvg.select("legendHeader").remove();
+      mapSvg.append("text")
+        .attr("transform", "translate(900,390)")
+        .attr("class", "legendHeader")
+        .text("Number of Protests")
+        .style("font-weight", "bold")
+        .style("font-family", "calibri")
+      mapSvg.append("g")
+        .attr("class", "legendQuant")
+        .attr("transform", "translate(900,400)");
+
+      mapSvg.select(".legendQuant")
+        .call(legend);
+    }
+
   </script>
 </body>
 </html>
