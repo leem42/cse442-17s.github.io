@@ -1,0 +1,51 @@
+
+  /******************** SVG responsive STYLING ************************/
+  .svg-container {
+    display: inline-block;
+    position: relative;
+    width: 100%; /* aspect ratio */
+    vertical-align: top;
+    overflow: hidden;
+  }
+
+  .svg-content-responsive {
+      display: inline-block;
+      position: absolute;
+      top: 10px;
+      left: 0;
+  }
+
+  /**************************** MAP STYLING ******************************/
+
+  /**************************** SLIDER STYLING **************************/
+  .axis--grid .domain {
+    fill: #ddd;
+    stroke: none;
+  }
+
+  .axis--x .domain,
+  .axis--grid .tick line {
+    stroke: #fff;
+  }
+
+  .axis--grid .tick--minor line {
+    stroke-opacity: .5;
+  }
+
+  /* Give handles a fill color. Necessary for them to also be able to glow
+  like the selection region.*/
+  .handle {
+    fill: rgba(173, 173, 173, 0.75);
+  }
+
+  /* Make clickable/draggable elements (the selection and handles), glow */
+  .selection.move-enabled:hover, .handle:hover {
+    filter: url(#glow-filter);
+  }
+
+
+   /*****************  Used for creating the legend STYLING *****************/
+  text.legendHeader {
+  color: #111;
+  margin: 24px 0 -12px 20px;
+  }

@@ -1,76 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<style>
-
-  /******************** SVG responsive STYLING ************************/
-  .svg-container {
-    display: inline-block;
-    position: relative;
-    width: 100%; /* aspect ratio */
-    vertical-align: top;
-    overflow: hidden;
-  }
-
-  .svg-content-responsive {
-      display: inline-block;
-      position: absolute;
-      top: 10px;
-      left: 0;
-  }
-
-  /**************************** MAP STYLING ******************************/
-
-  /**************************** SLIDER STYLING **************************/
-  .axis--grid .domain {
-    fill: #ddd;
-    stroke: none;
-  }
-
-  .axis--x .domain,
-  .axis--grid .tick line {
-    stroke: #fff;
-  }
-
-  .axis--grid .tick--minor line {
-    stroke-opacity: .5;
-  }
-
-  /* Give handles a fill color. Necessary for them to also be able to glow
-  like the selection region.*/
-  .handle {
-    fill: rgba(173, 173, 173, 0.75);
-  }
-
-  /* Make clickable/draggable elements (the selection and handles), glow */
-  .selection.move-enabled:hover, .handle:hover {
-    filter: url(#glow-filter);
-  }
-
-
-   /*****************  Used for creating the legend STYLING *****************/
-  text.legendHeader {
-  color: #111;
-  margin: 24px 0 -12px 20px;
-  }
-
-</style>
-
-
-<head>
-  <meta charset="utf-8">
-  <title>Pie</title>
-  <script type = "text/javascript" src = "abbreviated_map.json"> </script>
-  <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
-</head>
-
-<body>
-  <script>
-
-    /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
-
     /************************* INITIALIZE COMMON VARIABLES *****************/
     // The data from the CSV
     var GLOBAL_CSV_ONLY_DATA = null;
@@ -137,32 +64,27 @@
       'Wisconsin': 'WI',
       'Wyoming': 'WY'
     };
+
+    /*********************** INITIALIZE MAP VARIABLES *******************/
       
     var GLOBAL_COLOR_SCALE = d3.scaleQuantile()
       .range(["rgb(237,248,233)","rgb(186,228,179)","rgb(116,196,118)","rgb(49,163,84)","rgb(0,109,44)"]);
     GLOBAL_COLOR_SCALE.domain([ 0, 1000]);
 
     var mapWidth = 1024, mapHeight = 500;
+
+
+    /*@@@@@@@@@@@@@@@@@@@@@@@ HANDLE VARIABLES @@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
+
+
    
-    var mapSVG = d3.select("body")
-      .append("div")
-      .classed("svg-container", true) //container class to make it responsive
-      .style("padding-bottom", "35%")
-      .append("svg")
-      //responsive SVG needs these 2 attributes and no width and height attr
-      .attr("preserveAspectRatio", "xMinYMin meet")
-      .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
-      //class to make it responsive
-      .classed("svg-content-responsive", true)
-      .attr('id', 'map-svg')
-      // .attr("width", mapWidth)
-      // .attr("height", mapHeight);
 
     // Start of Map Code
     var projection = d3.geoAlbersUsa()
      .translate([mapWidth/2, mapHeight/2])
      .scale([1000]);
-    
+    alert("hello");
     // Define path generator
     var path = d3.geoPath().projection(projection);
 
@@ -179,8 +101,33 @@
     var sliderX = d3.scaleTime()
         .rangeRound([0, sliderWidth]);
 
-    // Create the svg element
-    var sliderSVG = d3.select("body")
+  
+        var mapSVG;
+        var sliderSVG;
+
+    
+    /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
+
+ d3.csv("SuccinctCSV.csv", function(error, data) {
+ /********************** LOAD THE CSV *************************/
+
+  if (error) throw error;   
+
+   mapSVG = d3.select("#wrapper")
+      .classed("svg-container", true) //container class to make it responsive
+      .style("padding-bottom", "35%")
+      .append("svg")
+      //responsive SVG needs these 2 attributes and no width and height attr
+      .attr("preserveAspectRatio", "xMinYMin meet")
+      .attr("viewBox", "0 0 " + mapWidth * 1.5 + " " + mapHeight * 1.5)
+      //class to make it responsive
+      .classed("svg-content-responsive", true)
+      .attr('id', 'map-svg')
+      .attr("width", mapWidth)
+      .attr("height", mapHeight);
+
+     // Create the svg element
+    sliderSVG = d3.select("#wrapper")
         .append("div")
         .classed("svg-container", true) //container class to make it responsive
         .style("padding-bottom", "10%")
@@ -196,16 +143,7 @@
         // .attr("height", sliderHeight + sliderMargin.top + sliderMargin.bottom)
       .append("g")
         .attr("transform", "translate(" + sliderMargin.left + "," + sliderMargin.top + ")");
-
-    /*********************** INITIALIZE MAP VARIABLES *******************/
-    
-    /*@@@@@@@@@@@@@@@ LOAD DATA AND INITIAL DRAWING @@@@@@@@@@@@@@@@@@@@@@*/
-
-    
-   
-    /********************** LOAD THE CSV *************************/
-    d3.csv("SuccinctCSV.csv", function(error, data) {
-      if (error) throw error;
+ 
 
       // Format the data to change the years to dates.
       data.forEach(function(d, i) {
@@ -246,7 +184,7 @@
       .entries(GLOBAL_CSV_ONLY_DATA)
 
       // drop down menu with  
-      topicMenu = d3.select('body')
+      topicMenu = d3.select('#wrapper')
       .append('div')
       .attr("class", "topics")
       .append('select')
@@ -682,7 +620,7 @@
       .cells(10)
       .scale(transformedColorScale);
       // http://bl.ocks.org/syntagmatic/29bccce80df0f253c97e
-      var mapSvg = d3.select("body").select("#map-svg")
+      var mapSvg = d3.select("#wrapper").select("#map-svg")
       mapSvg.select(".legendHeader").remove();
       mapSvg.append("text")
         .attr("transform", "translate(900,390)")
@@ -697,8 +635,4 @@
       mapSvg.select(".legendQuant")
         .call(legend);
     }
-
-  </script>
-</body>
-</html>
 
